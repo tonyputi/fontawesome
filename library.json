@@ -5,7 +5,7 @@
   "keywords": ["icons", "embedded", "platformio", "bitmap", "u8g2"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/tonyputi/fontawesome.git"
+    "url": "https://github.com/tonyputi/uicons.git"
   },
   "authors": [
     {
