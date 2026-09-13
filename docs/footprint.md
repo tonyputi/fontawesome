@@ -16,6 +16,25 @@ stay in flash through `PROGMEM` while object placement follows the toolchain
 defaults). `header bytes` is the generated source file size, useful for
 compile-time intuition but not a device cost.
 
+## Target mapping
+
+Data bytes are exact on every target because the generator emits the same
+1-bpp arrays everywhere; only their placement differs:
+
+- **AVR (Harvard architecture):** data arrays stay in flash through
+  `UICONS_PROGMEM`; every byte is read through `readByte`, i.e.
+  `pgm_read_byte`, which the golden tests cover on host. `Icon` metadata
+  objects follow the toolchain defaults for `const` data.
+- **ARM Cortex-M (unified address space):** `const` data and metadata live
+  in flash with zero RAM cost; `UICONS_PROGMEM` is empty and `readByte` is a
+  plain dereference.
+- **Host:** `sizeof(Icon)` is 24 bytes; use it only as an upper-bound hint,
+  since padding is target-dependent.
+
+No hardware is needed to reproduce any number here: `./scripts/quality.sh`
+rebuilds the example packs, checks the outputs byte-for-byte, and runs the
+`report` command in CI.
+
 ## Representative icons (measured)
 
 Font Awesome, `mono-vertical`:
@@ -73,7 +92,17 @@ not flash:
   masters only at 16/32/64; Lucide strokes collapse below 16px (see
   `assets/lucide/README.md`). Small icons must be checked masters, never
   silent downscales — hence per-catalog size validation with actionable
-  errors.
+  errors. Small masters are visually checked, not just measured: the pack
+golden test renders the real 16x16 `fas/heart` through the renderer and
+compares it pixel-for-pixel against `tests/golden/fas-heart-16.pbm`, and
+the Lucide suite enforces legibility density bounds at every supported size.
+- **Per-icon headers plus linker garbage collection**: unnecessary. The
+  single selective header already excludes every unused icon, so there is
+  nothing left for the linker to collect; per-icon headers would only slow
+  down builds with more translation units.
+- **Grayscale formats**: deferred. Neither catalog ships grayscale masters,
+  so generated output stays 1-bpp; `PixelFormat::Gray2`/`Gray4` remain
+  reserved in the API and rejected by the renderer until a pack needs them.
 
 ## Selective generation is the default path
 
