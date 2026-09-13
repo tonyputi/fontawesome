@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#if defined(__AVR__) && !defined(PROGMEM)
+#if defined(__AVR__)
 #include <avr/pgmspace.h>
 #endif
 
@@ -32,6 +32,8 @@ struct Icon {
     const uint8_t* data;
     uint16_t width;
     uint16_t height;
+    // Bytes per row for MonoRowMajor, bytes per 8-pixel page for
+    // MonoVertical. Grayscale formats are reserved for a later renderer.
     uint16_t stride;
     uint32_t byteCount;
     PixelFormat format;
@@ -49,5 +51,13 @@ struct Icon {
           byteCount(byteCount_),
           format(format_) {}
 };
+
+inline uint8_t readByte(const uint8_t* address) {
+#if defined(__AVR__)
+    return pgm_read_byte(address);
+#else
+    return *address;
+#endif
+}
 
 }  // namespace uicons

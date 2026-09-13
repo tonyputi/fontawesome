@@ -1,6 +1,7 @@
 #pragma once
 
 #include <uicons/icon.h>
+#include <uicons/renderer.h>
 
 #define UICONS_VERSION_MAJOR 0
 #define UICONS_VERSION_MINOR 1
