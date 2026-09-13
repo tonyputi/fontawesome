@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import math
 import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import List, Sequence, Tuple
 
@@ -32,8 +33,8 @@ ALIASES = {
     "home": "house",
 }
 
-_TAG = re.compile(r"<(?P<kind>path|circle|rect|line|polyline|polygon)\b(?P<attrs>[^>]*?)/?>")
-_ATTR = re.compile(r"([\w-]+)\s*=\s*\"([^\"]*)\"")
+_SHAPE_TAGS = ("path", "circle", "rect", "line", "polyline", "polygon")
+_METADATA_TAGS = ("title", "desc", "defs", "metadata")
 _TOKEN = re.compile(r"[AaCcHhLlMmQqSsTtVvZz]|[-+]?(?:[0-9]*\.[0-9]+|[0-9]+\.?)(?:[eE][-+]?[0-9]+)?")
 _SEPARATOR = re.compile(r"[,\s]+")
 
@@ -46,8 +47,12 @@ def read_pack_metadata(icons_dir: Path) -> Tuple[str, str]:
     return version, LICENSE_NAME
 
 
-def _attributes(text: str) -> dict:
-    return {name: value for name, value in _ATTR.findall(text)}
+def _local_name(tag: str) -> str:
+    """Strip any XML namespace prefix so vendored SVGs parse identically."""
+
+    if "}" in tag:
+        return tag.rsplit("}", 1)[1]
+    return tag.rsplit(":", 1)[-1]
 
 
 def _parse_points(text: str) -> List[Tuple[float, float]]:
@@ -314,16 +319,33 @@ def _parse_path(data: str) -> List[Tuple[List[Tuple[float, float]], bool]]:
 
 
 def _shapes_from_svg(text: str) -> Tuple[List[Tuple[List[Tuple[float, float]], bool]], float]:
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError as error:
+        raise ValueError(f"invalid SVG document: {error}") from error
+    if _local_name(root.tag) != "svg":
+        raise ValueError(f"expected an <svg> root, got <{_local_name(root.tag)}>")
     stroke_width = DEFAULT_STROKE_WIDTH
-    root = re.search(r"<svg\b([^>]*)>", text)
-    if root:
-        attrs = _attributes(root.group(1))
-        if "stroke-width" in attrs:
-            stroke_width = float(attrs["stroke-width"])
+    if "stroke-width" in root.attrib:
+        stroke_width = float(root.attrib["stroke-width"])
     polylines: List[Tuple[List[Tuple[float, float]], bool]] = []
-    for match in _TAG.finditer(text):
-        attrs = _attributes(match.group("attrs"))
-        kind = match.group("kind")
+    for element in root.iter():
+        if element is root:
+            continue
+        kind = _local_name(element.tag)
+        if kind in _METADATA_TAGS:
+            continue
+        if kind not in _SHAPE_TAGS:
+            raise ValueError(
+                f"unsupported SVG element <{kind}>: only {', '.join(_SHAPE_TAGS)} render"
+            )
+        transform = (element.get("transform") or "").strip()
+        if transform:
+            raise ValueError(
+                f"<{kind}> uses transform={transform!r}, "
+                "which the offline rasterizer does not support"
+            )
+        attrs = element.attrib
         if kind == "path":
             polylines.extend(_parse_path(attrs.get("d", "")))
         elif kind == "circle":
