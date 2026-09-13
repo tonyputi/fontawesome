@@ -12,6 +12,8 @@ Embedded bitmap icons for PlatformIO and Arduino projects.
 - Legacy assets are available in 16x16, 32x32, and 64x64 sizes.
 - The public `uicons` API defines icon metadata and storage formats.
 - A pinned Lucide outline pack is available through the same generator and API.
+- Product scope, non-goals, and the minimum viable workflow are defined in
+  `docs/differentiation.md`.
 - Display renderers, selective generation, and animations are
   planned as tracked work in [issue #1](https://github.com/tonyputi/uicons/issues/1).
 
