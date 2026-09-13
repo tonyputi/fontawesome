@@ -76,6 +76,18 @@ for manifest in examples/uicons.json examples/lucide.json examples/animation.jso
     ./scripts/uicons report --manifest "$manifest" >/dev/null
 done
 
+printf '%s\n' '== example headers drift =='
+for example in examples/basic examples/display_u8g2 examples/display_adafruit examples/display_tiny4koled; do
+    ./scripts/uicons build --manifest "$example/uicons.json" --output-dir "$BUILD_DIR/gen-example" >/dev/null
+    if ! cmp -s "$BUILD_DIR/gen-example/uicons_generated.h" "$example/include/uicons_generated.h"; then
+        printf 'drift detected: %s\n' "$example" >&2
+        exit 1
+    fi
+done
+
+printf '%s\n' '== PlatformIO examples =='
+make -C "$ROOT_DIR" examples
+
 printf '%s\n' '== clang-tidy =='
 clang-tidy tests/uicons_renderer_test.cpp tests/uicons_api_test.cpp tests/uicons_golden_test.cpp tests/uicons_animation_test.cpp tests/uicons_pack_golden_test.cpp --quiet -- -I"$BUILD_DIR/gen-golden" \
     -std=c++11 -Wall -Wextra -Wpedantic -Isrc
