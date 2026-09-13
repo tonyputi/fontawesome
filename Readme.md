@@ -26,6 +26,20 @@ The legacy Font Awesome umbrella header is still supported:
 #include <fontawesome.h>
 ```
 
+## Development quality gate
+
+The maintained C++ sources use `.clang-format`, `.clang-tidy`, and `cppcheck`.
+Generated icon data under `src/vertical/` is deliberately excluded from these
+checks. Run the complete local gate with:
+
+```sh
+./scripts/quality.sh
+```
+
+The GitHub Actions workflow runs the same single-job gate. It intentionally does
+not use a board matrix: hardware compilation can be added later when it provides
+more value than its CI cost.
+
 ## License
 
 The library code is MIT licensed. Bundled icon assets retain the licenses and
