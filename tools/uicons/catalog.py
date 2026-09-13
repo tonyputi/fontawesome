@@ -10,7 +10,14 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
+
+from .lucide import ALIASES as _LUCIDE_ALIASES
+from .lucide import SIZES as _LUCIDE_SIZES
+from .lucide import pixel_density as _lucide_density
+from .lucide import rasterize_svg as _rasterize_lucide_svg
+from .lucide import read_pack_metadata as _lucide_pack_metadata
+
 
 
 _HEADER_NAME = re.compile(r"^(?P<family>fas|far|fab)_(?P<size>[0-9]+)x(?P=size)\.h$")
@@ -61,6 +68,23 @@ def normalize_identifier(identifier: str) -> str:
         valid = ", ".join(sorted(_FAMILY_ALIASES))
         raise ValueError(f"unsupported family {parts[0]!r}; choose one of: {valid}")
     return f"{family}/{parts[1]}"
+
+
+CATALOGS = ("fontawesome", "lucide")
+
+_DEFAULT_DIRECTORIES = {
+    "fontawesome": Path("src/vertical"),
+    "lucide": Path("assets/lucide/icons"),
+}
+
+
+def default_directory(catalog: str) -> Path:
+    """Return the repository-relative catalog directory for ``catalog``."""
+
+    try:
+        return _DEFAULT_DIRECTORIES[catalog]
+    except KeyError as error:
+        raise ValueError(f"unsupported catalog {catalog!r}; choose one of: {', '.join(CATALOGS)}") from error
 
 
 class Catalog:
@@ -134,3 +158,107 @@ class Catalog:
 
         assets = [self.resolve(identifier, size) for identifier in identifiers for size in sizes]
         return sorted(assets, key=lambda asset: (asset.family, asset.name, asset.width, asset.height))
+
+    @property
+    def available_sizes(self) -> List[int]:
+        """Return every raster size offered by this catalog, sorted."""
+
+        sizes = {size for family_sizes in self._sizes.values() for size in family_sizes}
+        return sorted(sizes)
+
+    @property
+    def provenance(self) -> str:
+        """Return a one-line source description for generated headers."""
+
+        return "Font Awesome checked-in bitmap catalog (see src/vertical/README.md)"
+
+
+class LucideCatalog:
+    """Rasterize the pinned Lucide SVG pack to mono-vertical bitmaps."""
+
+    name = "lucide"
+
+    def __init__(self, directory: Path):
+        self.directory = Path(directory)
+        svgs = sorted(self.directory.glob("*.svg"), key=lambda path: path.name)
+        if not svgs:
+            raise ValueError(f"no Lucide SVGs found in {self.directory}")
+        self._sources: Dict[str, str] = {}
+        for svg in svgs:
+            self._sources[svg.stem] = svg.read_text(encoding="utf-8")
+        self._version, self._license = _lucide_pack_metadata(self.directory)
+
+    @staticmethod
+    def normalize_identifier(identifier: str) -> str:
+        """Return the canonical ``lucide/name`` form for an icon identifier."""
+
+        parts = identifier.split("/", 1)
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            raise ValueError(
+                f"invalid icon {identifier!r}; use lucide/NAME, for example lucide/heart"
+            )
+        if parts[0].lower() != "lucide":
+            raise ValueError(f"unsupported family {parts[0]!r} for the Lucide catalog; use 'lucide'")
+        return f"lucide/{_LUCIDE_ALIASES.get(parts[1], parts[1])}"
+
+    @property
+    def available_sizes(self) -> List[int]:
+        """Return every raster size offered by this catalog, sorted."""
+
+        return list(_LUCIDE_SIZES)
+
+    @property
+    def provenance(self) -> str:
+        """Return a one-line source description for generated headers."""
+
+        return f"Lucide {self._version} ({self._license}, https://github.com/lucide-icons/lucide)"
+
+    def available_icons(self) -> List[str]:
+        """Return canonical ``lucide/name`` identifiers, sorted."""
+
+        return sorted(f"lucide/{name}" for name in self._sources)
+
+    def resolve(self, identifier: str, size: int) -> IconAsset:
+        """Resolve ``lucide/name`` by rasterizing the vendored SVG at ``size``."""
+
+        canonical = self.normalize_identifier(identifier)
+        _, name = canonical.split("/", 1)
+        if size not in _LUCIDE_SIZES:
+            raise ValueError(
+                f"icon {canonical!r} is unavailable at {size}x{size}; "
+                f"available Lucide sizes: {', '.join(map(str, _LUCIDE_SIZES))}"
+            )
+        try:
+            source = self._sources[name]
+        except KeyError as error:
+            raise ValueError(
+                f"icon {canonical!r} is not in the vendored Lucide subset; "
+                f"available icons: {', '.join(self.available_icons())}"
+            ) from error
+        data = _rasterize_lucide_svg(source, size)
+        if _lucide_density(data) == 0.0:
+            raise ValueError(f"icon {canonical!r} rasterized empty at {size}x{size}")
+        return IconAsset(
+            family="lucide",
+            name=name,
+            width=size,
+            height=size,
+            data=data,
+            source_symbol=f"lucide_{name}.svg",
+        )
+
+    def resolve_many(self, identifiers: Iterable[str], sizes: Iterable[int]) -> List[IconAsset]:
+        """Resolve and return assets in deterministic family/name/size order."""
+
+        assets = [self.resolve(identifier, size) for identifier in identifiers for size in sizes]
+        return sorted(assets, key=lambda asset: (asset.family, asset.name, asset.width, asset.height))
+
+
+def open_catalog(name: str, directory: Optional[Path] = None):
+    """Open the ``fontawesome`` or ``lucide`` catalog, defaulting to its directory."""
+
+    if name == "fontawesome":
+        return Catalog(default_directory(name) if directory is None else directory)
+    if name == "lucide":
+        return LucideCatalog(default_directory(name) if directory is None else directory)
+    raise ValueError(f"unsupported catalog {name!r}; choose one of: {', '.join(CATALOGS)}")

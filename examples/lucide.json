@@ -1,0 +1,9 @@
+{
+  "catalog": "lucide",
+  "sizes": [16, 24],
+  "format": "mono-vertical",
+  "icons": [
+    "lucide/heart",
+    "lucide/house"
+  ]
+}

@@ -11,7 +11,8 @@ Embedded bitmap icons for PlatformIO and Arduino projects.
 - Font Awesome Solid, Regular, and Brands bitmap assets are still available.
 - Legacy assets are available in 16x16, 32x32, and 64x64 sizes.
 - The public `uicons` API defines icon metadata and storage formats.
-- Display renderers, selective generation, Lucide assets, and animations are
+- A pinned Lucide outline pack is available through the same generator and API.
+- Display renderers, selective generation, and animations are
   planned as tracked work in [issue #1](https://github.com/tonyputi/uicons/issues/1).
 
 ## Include the public API
@@ -43,6 +44,25 @@ Aliases such as `solid/heart` are canonicalized to `fas/heart`; unsupported
 icons and sizes fail with an actionable error. Removing an icon from `uicons.json`
 and running `build` rewrites the header without that icon. See
 `examples/uicons.json` for a manifest example.
+
+## Lucide icon pack
+
+Lucide is available as a second catalog through the same core API
+(`uicons::Icon`, `uicons::PixelFormat::MonoVertical`, `uicons::render`).
+The pack vendors pinned upstream SVGs and converts them offline with the
+standard library only:
+
+```sh
+./scripts/uicons init --manifest uicons-lucide.json --catalog lucide --sizes 16,24
+./scripts/uicons add lucide/heart lucide/house --manifest uicons-lucide.json
+./scripts/uicons build --manifest uicons-lucide.json
+```
+
+Lucide icons are outline-based and carry no brand logos; brands remain
+Font Awesome `fab` only. Size 16 is the minimum recommended raster, 24 is
+preferred, and 8 is intentionally not offered (strokes collapse below a
+readable threshold). Every generated header records the Lucide version and
+ISC license. See `assets/lucide/README.md` and `examples/lucide.json`.
 
 ## Development quality gate
 

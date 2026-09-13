@@ -1,5 +1,12 @@
 """Dependency-free uIcons catalog and generation tools."""
 
-from .catalog import Catalog, IconAsset, normalize_identifier
+from .catalog import CATALOGS, Catalog, IconAsset, LucideCatalog, normalize_identifier, open_catalog
 
-__all__ = ["Catalog", "IconAsset", "normalize_identifier"]
+__all__ = [
+    "CATALOGS",
+    "Catalog",
+    "IconAsset",
+    "LucideCatalog",
+    "normalize_identifier",
+    "open_catalog",
+]
