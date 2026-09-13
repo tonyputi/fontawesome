@@ -50,3 +50,23 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Legacy asset blobs (Font Awesome OTF/PNG/SVG sources). Generation uses the
+# checked-in src/vertical headers and assets/lucide only.
+assets
+
+# macOS Finder metadata.
+.DS_Store
+
+# Python bytecode, environments, and packaging artifacts.
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+
+# Local build output (see Makefile BUILD_DIR).
+build/
+dist/
+*.tar.gz

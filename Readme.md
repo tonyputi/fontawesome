@@ -110,6 +110,18 @@ The GitHub Actions workflow runs the same single-job gate. It intentionally does
 not use a board matrix: hardware compilation can be added later when it provides
 more value than its CI cost.
 
+## Makefile
+
+A thin convenience wrapper delegates to the canonical scripts (`make help`
+lists everything):
+
+```sh
+make quality   # full gate, same as ./scripts/quality.sh
+make build     # build every examples/*.json manifest into build/<name>/
+make report    # footprint report for every example manifest
+make clean     # remove build/ output and Python caches
+```
+
 ## License
 
 The library code is MIT licensed. Bundled icon assets retain the licenses and
