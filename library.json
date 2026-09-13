@@ -1,5 +1,5 @@
 {
-  "name": "uIcons",
+  "name": "uicons",
   "version": "0.1.0",
   "description": "Embedded icons with selectable catalogs, sizes, and display formats",
   "keywords": ["icons", "embedded", "platformio", "bitmap", "u8g2"],
@@ -15,8 +15,19 @@
   "license": "MIT",
   "frameworks": "*",
   "platforms": "*",
-  "headers": ["uicons.h"],
+  "headers": ["uicons.h", "fontawesome.h"],
   "build": {
     "includeDir": "src"
+  },
+  "export": {
+    "exclude": [
+      "assets/*",
+      "scripts/*",
+      "tools/*",
+      "tests/*",
+      "examples/*.json",
+      "build/*",
+      ".*"
+    ]
   }
 }

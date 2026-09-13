@@ -103,4 +103,9 @@ cppcheck \
 
 printf '%s\n' '== PlatformIO package =='
 pio pkg pack --output "$BUILD_DIR/uicons.tar.gz" . >/dev/null
+tar -tzf "$BUILD_DIR/uicons.tar.gz" | sort > "$BUILD_DIR/package-contents.txt"
+if grep -E '(^|/)(assets|scripts|tools|tests|build)/' "$BUILD_DIR/package-contents.txt"; then
+    printf '%s\n' 'error: package leaks development files' >&2
+    exit 1
+fi
 printf 'quality checks passed\n'
