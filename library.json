@@ -1,0 +1,22 @@
+{
+  "name": "uIcons",
+  "version": "0.1.0",
+  "description": "Embedded icons with selectable catalogs, sizes, and display formats",
+  "keywords": ["icons", "embedded", "platformio", "bitmap", "u8g2"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tonyputi/fontawesome.git"
+  },
+  "authors": [
+    {
+      "name": "nomadnt-iot"
+    }
+  ],
+  "license": "MIT",
+  "frameworks": "*",
+  "platforms": "*",
+  "headers": ["uicons.h"],
+  "build": {
+    "includeDir": "src"
+  }
+}
