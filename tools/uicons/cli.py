@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from .catalog import Catalog, normalize_identifier
+from .catalog import CATALOGS, open_catalog
 from .generator import build, read_manifest, update_manifest, validate_manifest
 
 
@@ -34,8 +34,8 @@ def _catalog_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--catalog-dir",
         type=Path,
-        default=Path("src/vertical"),
-        help="checked-in catalog headers (default: src/vertical)",
+        default=None,
+        help="catalog directory override (default: per-catalog repository directory)",
     )
 
 
@@ -45,6 +45,12 @@ def create_parser() -> argparse.ArgumentParser:
 
     init = commands.add_parser("init", help="create a project manifest")
     _manifest_argument(init)
+    init.add_argument(
+        "--catalog",
+        choices=sorted(CATALOGS),
+        default="fontawesome",
+        help="icon catalog (default: fontawesome)",
+    )
     init.add_argument("--sizes", type=_sizes, default=[16], help="comma-separated sizes (default: 16)")
     init.add_argument("--format", default="mono-vertical", help="bitmap format")
 
@@ -71,16 +77,32 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _write_manifest(path: Path, icons: Sequence[str], sizes: Sequence[int], output_format: str) -> None:
-    update_manifest(path, icons, sizes=sizes, output_format=output_format)
+def _write_manifest(
+    path: Path,
+    icons: Sequence[str],
+    sizes: Sequence[int],
+    output_format: str,
+    catalog: str,
+) -> None:
+    update_manifest(path, icons, sizes=sizes, output_format=output_format, catalog=catalog)
     print(f"updated {path}")
 
 
 def _init(args: argparse.Namespace) -> None:
     if args.manifest.exists():
         raise ValueError(f"manifest already exists: {args.manifest}")
-    manifest = {"catalog": "fontawesome", "sizes": args.sizes, "format": args.format, "icons": []}
+    manifest = {"catalog": args.catalog, "sizes": args.sizes, "format": args.format, "icons": []}
     validate_manifest(manifest)
+    catalog = open_catalog(args.catalog, None)
+    unsupported = sorted(set(args.sizes) - set(catalog.available_sizes))
+    if unsupported:
+        raise ValueError(
+            "sizes {} are unavailable in the {!r} catalog; available sizes: {}".format(
+                ", ".join(map(str, unsupported)),
+                args.catalog,
+                ", ".join(map(str, catalog.available_sizes)),
+            )
+        )
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"created {args.manifest}")
@@ -88,23 +110,26 @@ def _init(args: argparse.Namespace) -> None:
 
 def _add(args: argparse.Namespace) -> None:
     manifest = read_manifest(args.manifest) if args.manifest.exists() else {}
+    catalog_name = manifest.get("catalog", "fontawesome")
     current_sizes = manifest.get("sizes", [16])
     sizes = args.sizes if args.sizes is not None else current_sizes
     output_format = args.format or manifest.get("format", "mono-vertical")
-    catalog = Catalog(args.catalog_dir)
+    catalog = open_catalog(catalog_name, args.catalog_dir)
     requested = [catalog.normalize_identifier(icon) for icon in args.icons]
     existing = {catalog.normalize_identifier(icon) for icon in manifest.get("icons", [])}
     icons = sorted(existing | set(requested))
     for icon in requested:
         for size in sizes:
             catalog.resolve(icon, size)
-    _write_manifest(args.manifest, icons, sizes, output_format)
+    _write_manifest(args.manifest, icons, sizes, output_format, catalog_name)
 
 
 def _remove(args: argparse.Namespace) -> None:
     manifest = read_manifest(args.manifest)
-    icons = {normalize_identifier(icon) for icon in manifest.get("icons", [])}
-    requested = {normalize_identifier(icon) for icon in args.icons}
+    catalog_name = manifest.get("catalog", "fontawesome")
+    catalog = open_catalog(catalog_name, None)
+    icons = {catalog.normalize_identifier(icon) for icon in manifest.get("icons", [])}
+    requested = {catalog.normalize_identifier(icon) for icon in args.icons}
     missing = sorted(requested - icons)
     if missing:
         raise ValueError("icons are not installed: " + ", ".join(missing))
@@ -113,6 +138,7 @@ def _remove(args: argparse.Namespace) -> None:
         sorted(icons - requested),
         manifest.get("sizes", [16]),
         manifest.get("format", "mono-vertical"),
+        catalog_name,
     )
 
 
