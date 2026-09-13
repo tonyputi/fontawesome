@@ -26,6 +26,24 @@ The legacy Font Awesome umbrella header is still supported:
 #include <fontawesome.h>
 ```
 
+## Selective generation
+
+The repository-local generator uses only Python's standard library and the
+checked-in bitmap catalog. It does not require Inkscape, ImageMagick, a font
+rasterizer, or network access during normal builds:
+
+```sh
+./scripts/uicons init
+./scripts/uicons add fas/heart fab/github --sizes 16
+./scripts/uicons build
+```
+
+This writes the selected assets to `include/uicons/generated/uicons_generated.h`.
+Aliases such as `solid/heart` are canonicalized to `fas/heart`; unsupported
+icons and sizes fail with an actionable error. Removing an icon from `uicons.json`
+and running `build` rewrites the header without that icon. See
+`examples/uicons.json` for a manifest example.
+
 ## Development quality gate
 
 The maintained C++ sources use `.clang-format`, `.clang-tidy`, and `cppcheck`.

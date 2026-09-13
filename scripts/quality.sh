@@ -34,6 +34,9 @@ printf '%s\n' '== host tests =='
     -o "$BUILD_DIR/uicons_renderer_test"
 "$BUILD_DIR/uicons_renderer_test"
 
+printf '%s\n' '== Python generator tests =='
+python3 -m unittest discover --start-directory tests --pattern 'test_*.py'
+
 printf '%s\n' '== clang-tidy =='
 clang-tidy tests/uicons_renderer_test.cpp --quiet -- \
     -std=c++11 -Wall -Wextra -Wpedantic -Isrc
