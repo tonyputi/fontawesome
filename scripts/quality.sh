@@ -9,6 +9,7 @@ cd "$ROOT_DIR"
 
 HAND_WRITTEN_CPP=(
     src/uicons.h
+    src/uicons/animation.h
     src/uicons/icon.h
     src/uicons/renderer.h
     src/uicons/adapters/mono_framebuffer.h
@@ -16,6 +17,7 @@ HAND_WRITTEN_CPP=(
     tests/uicons_renderer_test.cpp
     tests/uicons_api_test.cpp
     tests/uicons_golden_test.cpp
+    tests/uicons_animation_test.cpp
 )
 
 for command in clang-format clang-tidy cppcheck pio; do
@@ -47,6 +49,12 @@ printf '%s\n' '== host tests =='
     -Isrc tests/uicons_golden_test.cpp \
     -o "$BUILD_DIR/uicons_golden_test"
 "$BUILD_DIR/uicons_golden_test"
+"${CXX:-c++}" \
+    -std=c++11 \
+    -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
+    -Isrc tests/uicons_animation_test.cpp \
+    -o "$BUILD_DIR/uicons_animation_test"
+"$BUILD_DIR/uicons_animation_test"
 
 printf '%s\n' '== Python generator tests =='
 python3 -m unittest discover --start-directory tests --pattern 'test_*.py'
@@ -61,7 +69,7 @@ for manifest in examples/uicons.json examples/lucide.json; do
 done
 
 printf '%s\n' '== clang-tidy =='
-clang-tidy tests/uicons_renderer_test.cpp tests/uicons_api_test.cpp tests/uicons_golden_test.cpp --quiet -- \
+clang-tidy tests/uicons_renderer_test.cpp tests/uicons_api_test.cpp tests/uicons_golden_test.cpp tests/uicons_animation_test.cpp --quiet -- \
     -std=c++11 -Wall -Wextra -Wpedantic -Isrc
 
 printf '%s\n' '== cppcheck =='
@@ -74,13 +82,15 @@ cppcheck \
     --suppressions-list=.cppcheck-suppressions \
     -Isrc \
     src/uicons.h \
+    src/uicons/animation.h \
     src/uicons/icon.h \
     src/uicons/renderer.h \
     src/uicons/adapters/mono_framebuffer.h \
     src/uicons/adapters/mono_pages.h \
     tests/uicons_renderer_test.cpp \
     tests/uicons_api_test.cpp \
-    tests/uicons_golden_test.cpp
+    tests/uicons_golden_test.cpp \
+    tests/uicons_animation_test.cpp
 
 printf '%s\n' '== PlatformIO package =='
 pio pkg pack --output "$BUILD_DIR/uicons.tar.gz" . >/dev/null

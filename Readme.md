@@ -81,6 +81,21 @@ before flashing:
 See `docs/footprint.md` for the measured comparison (representative icons,
 format costs, evaluated RLE/cropping, and selective vs full-catalog bytes).
 
+## Animations
+
+Pre-rendered frame animations play through a non-blocking player: the app
+passes `now` (e.g. `millis()`) to `uicons::update`/`uicons::draw`, and
+nothing calls `delay()` or owns the scheduler. Animations are generated only
+when listed in the manifest `"animations"` array, and frames may only
+reference already-selected icons and sizes:
+
+```sh
+./scripts/uicons build --manifest examples/animation.json
+./scripts/uicons report --manifest examples/animation.json
+```
+
+See `docs/animations.md` and `examples/animation.json`.
+
 ## Development quality gate
 
 The maintained C++ sources use `.clang-format`, `.clang-tidy`, and `cppcheck`.

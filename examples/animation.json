@@ -1,0 +1,18 @@
+{
+  "catalog": "fontawesome",
+  "sizes": [16],
+  "format": "mono-vertical",
+  "icons": [
+    "fas/heart"
+  ],
+  "animations": [
+    {
+      "name": "heartbeat",
+      "loop": 0,
+      "frames": [
+        {"icon": "fas/heart", "size": 16, "duration_ms": 400},
+        {"icon": "fas/heart", "size": 16, "duration_ms": 200}
+      ]
+    }
+  ]
+}
