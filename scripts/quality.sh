@@ -18,6 +18,7 @@ HAND_WRITTEN_CPP=(
     tests/uicons_api_test.cpp
     tests/uicons_golden_test.cpp
     tests/uicons_animation_test.cpp
+    tests/uicons_pack_golden_test.cpp
 )
 
 for command in clang-format clang-tidy cppcheck pio; do
@@ -55,12 +56,19 @@ printf '%s\n' '== host tests =='
     -Isrc tests/uicons_animation_test.cpp \
     -o "$BUILD_DIR/uicons_animation_test"
 "$BUILD_DIR/uicons_animation_test"
+./scripts/uicons build --manifest tests/golden/uicons.json --output-dir "$BUILD_DIR/gen-golden" >/dev/null
+"${CXX:-c++}" \
+    -std=c++11 \
+    -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
+    -Isrc -I"$BUILD_DIR/gen-golden" tests/uicons_pack_golden_test.cpp \
+    -o "$BUILD_DIR/uicons_pack_golden_test"
+"$BUILD_DIR/uicons_pack_golden_test"
 
 printf '%s\n' '== Python generator tests =='
 python3 -m unittest discover --start-directory tests --pattern 'test_*.py'
 
 printf '%s\n' '== generation drift =='
-for manifest in examples/uicons.json examples/lucide.json; do
+for manifest in examples/uicons.json examples/lucide.json examples/animation.json; do
     name="$(basename "$manifest" .json)"
     ./scripts/uicons build --manifest "$manifest" --output-dir "$BUILD_DIR/gen-a-$name" >/dev/null
     ./scripts/uicons build --manifest "$manifest" --output-dir "$BUILD_DIR/gen-b-$name" >/dev/null
@@ -69,7 +77,7 @@ for manifest in examples/uicons.json examples/lucide.json; do
 done
 
 printf '%s\n' '== clang-tidy =='
-clang-tidy tests/uicons_renderer_test.cpp tests/uicons_api_test.cpp tests/uicons_golden_test.cpp tests/uicons_animation_test.cpp --quiet -- \
+clang-tidy tests/uicons_renderer_test.cpp tests/uicons_api_test.cpp tests/uicons_golden_test.cpp tests/uicons_animation_test.cpp tests/uicons_pack_golden_test.cpp --quiet -- -I"$BUILD_DIR/gen-golden" \
     -std=c++11 -Wall -Wextra -Wpedantic -Isrc
 
 printf '%s\n' '== cppcheck =='
@@ -90,7 +98,8 @@ cppcheck \
     tests/uicons_renderer_test.cpp \
     tests/uicons_api_test.cpp \
     tests/uicons_golden_test.cpp \
-    tests/uicons_animation_test.cpp
+    tests/uicons_animation_test.cpp \
+    tests/uicons_pack_golden_test.cpp
 
 printf '%s\n' '== PlatformIO package =='
 pio pkg pack --output "$BUILD_DIR/uicons.tar.gz" . >/dev/null

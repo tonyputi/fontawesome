@@ -66,6 +66,55 @@ void testVerticalPages() {
     assertShape(pagePixel, buffer, 6);
 }
 
+void testRotationMatchesUnrotatedRender() {
+    uint8_t plain[5] = {0};
+    uint8_t rotated[5] = {0};
+    uicons::adapters::MonoFramebuffer plainFramebuffer(plain, 6, 5, 1);
+    uicons::adapters::MonoFramebuffer rotatedFramebuffer(rotated, 6, 5, 1);
+
+    assert(uicons::adapters::render(rowIcon, plainFramebuffer, 1, 1));
+    uicons::Canvas canvas(&rotatedFramebuffer, rotatedFramebuffer.width, rotatedFramebuffer.height,
+                          uicons::adapters::detail::setFramebufferPixel);
+    assert(uicons::renderRotated(rowIcon, canvas, 1, 1, uicons::Rotation::Deg0));
+    assert(std::equal(std::begin(plain), std::end(plain), std::begin(rotated)));
+}
+
+void testRotationTransforms() {
+    // 4x3 source rotated 180 degrees maps (x, y) to (3 - x, 2 - y).
+    uint8_t buffer[3] = {0};
+    uicons::Canvas canvas(&buffer, 4, 3, [](void* context, int16_t x, int16_t y, uint32_t color) {
+        (void)color;
+        uint8_t* data = static_cast<uint8_t*>(context);
+        data[static_cast<uint32_t>(y)] |= static_cast<uint8_t>(0x80u >> x);
+    });
+    assert(uicons::renderRotated(rowIcon, canvas, 0, 0, uicons::Rotation::Deg180));
+    // (0,0)->(3,2), (2,0)->(1,2), (1,1)->(2,1), (2,1)->(1,1), (0,2)->(3,0), (3,2)->(0,0).
+    const uint8_t expected[] = {0x90, 0x60, 0x50};
+    assert(std::equal(std::begin(expected), std::end(expected), buffer));
+
+    uint8_t wide[4] = {0};
+    uicons::Canvas wideCanvas(&wide, 3, 4, [](void* context, int16_t x, int16_t y, uint32_t color) {
+        (void)color;
+        uint8_t* data = static_cast<uint8_t*>(context);
+        data[static_cast<uint32_t>(y)] |= static_cast<uint8_t>(0x80u >> x);
+    });
+    assert(uicons::renderRotated(rowIcon, wideCanvas, 0, 0, uicons::Rotation::Deg270));
+    // (0,0)->(0,3), (2,0)->(0,1), (1,1)->(1,2), (2,1)->(1,1), (0,2)->(2,3), (3,2)->(2,0).
+    const uint8_t expected270[] = {0x20, 0xc0, 0x40, 0xa0};
+    assert(std::equal(std::begin(expected270), std::end(expected270), wide));
+}
+
+void testInvalidRotation() {
+    uint8_t buffer[5] = {0};
+    uicons::Canvas canvas(&buffer, 6, 5, [](void* context, int16_t x, int16_t y, uint32_t color) {
+        (void)context;
+        (void)x;
+        (void)y;
+        (void)color;
+    });
+    assert(!uicons::renderRotated(rowIcon, canvas, 0, 0, static_cast<uicons::Rotation>(9)));
+}
+
 void testInvalidFormats() {
     uint8_t buffer[1] = {0};
     uicons::adapters::MonoFramebuffer framebuffer(buffer, 8, 1, 1);
@@ -79,6 +128,9 @@ void testInvalidFormats() {
 int main() {
     testRowMajorFramebuffer();
     testVerticalPages();
+    testRotationMatchesUnrotatedRender();
+    testRotationTransforms();
+    testInvalidRotation();
     testInvalidFormats();
     return 0;
 }

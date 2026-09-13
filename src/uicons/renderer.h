@@ -6,6 +6,15 @@
 
 namespace uicons {
 
+// Orthogonal rotations only: arbitrary angles need interpolation buffers and
+// have no place in a zero-RAM renderer.
+enum class Rotation : uint8_t {
+    Deg0 = 0,
+    Deg90 = 1,
+    Deg180 = 2,
+    Deg270 = 3,
+};
+
 struct Canvas {
     void* context;
     uint16_t width;
@@ -51,6 +60,37 @@ inline bool inside(const Canvas& canvas, int32_t x, int32_t y) {
     return x >= 0 && y >= 0 && x < canvas.width && y < canvas.height;
 }
 
+inline bool rotatedOffset(uint16_t sourceX, uint16_t sourceY, const Icon& icon, Rotation rotation,
+                          uint16_t& targetX, uint16_t& targetY) {
+    const uint32_t width = icon.width;
+    const uint32_t height = icon.height;
+    uint32_t x = sourceX;
+    uint32_t y = sourceY;
+
+    switch (rotation) {
+    case Rotation::Deg0:
+        break;
+    case Rotation::Deg90:
+        x = height - 1u - sourceY;
+        y = sourceX;
+        break;
+    case Rotation::Deg180:
+        x = width - 1u - sourceX;
+        y = height - 1u - sourceY;
+        break;
+    case Rotation::Deg270:
+        x = sourceY;
+        y = width - 1u - sourceX;
+        break;
+    default:
+        return false;
+    }
+
+    targetX = static_cast<uint16_t>(x);
+    targetY = static_cast<uint16_t>(y);
+    return true;
+}
+
 inline bool pixel(const Icon& icon, uint16_t x, uint16_t y) {
     uint32_t index = 0;
     uint8_t mask = 0;
@@ -85,6 +125,40 @@ inline bool render(const Icon& icon, const Canvas& canvas, int16_t x, int16_t y,
 
             const int32_t targetX = static_cast<int32_t>(x) + iconX;
             const int32_t targetY = static_cast<int32_t>(y) + iconY;
+            if (detail::inside(canvas, targetX, targetY)) {
+                canvas.setPixel(canvas.context, static_cast<int16_t>(targetX),
+                                static_cast<int16_t>(targetY), color);
+            }
+        }
+    }
+
+    return true;
+}
+
+// Render an icon rotated by a multiple of 90 degrees clockwise. The (x, y)
+// origin is the top-left corner of the rotated bounding box, so Deg90 and
+// Deg270 swap the icon width and height. Clipping and color work exactly as
+// in render().
+inline bool renderRotated(const Icon& icon, const Canvas& canvas, int16_t x, int16_t y,
+                          Rotation rotation, uint32_t color = 1) {
+    if (canvas.context == nullptr || canvas.setPixel == nullptr || canvas.width == 0 ||
+        canvas.height == 0 || !detail::validIcon(icon)) {
+        return false;
+    }
+
+    for (uint16_t iconY = 0; iconY < icon.height; ++iconY) {
+        for (uint16_t iconX = 0; iconX < icon.width; ++iconX) {
+            if (!detail::pixel(icon, iconX, iconY)) {
+                continue;
+            }
+
+            uint16_t offsetX = 0;
+            uint16_t offsetY = 0;
+            if (!detail::rotatedOffset(iconX, iconY, icon, rotation, offsetX, offsetY)) {
+                return false;
+            }
+            const int32_t targetX = static_cast<int32_t>(x) + offsetX;
+            const int32_t targetY = static_cast<int32_t>(y) + offsetY;
             if (detail::inside(canvas, targetX, targetY)) {
                 canvas.setPixel(canvas.context, static_cast<int16_t>(targetX),
                                 static_cast<int16_t>(targetY), color);

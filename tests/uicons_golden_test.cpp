@@ -115,6 +115,23 @@ void testVerticalPagesGolden() {
     checkGolden("tests/golden/vertical-pages.pbm", actual, length);
 }
 
+void writeFramebufferPixel(void* context, int16_t x, int16_t y, uint32_t color) {
+    (void)color;
+    uint8_t* data = static_cast<uint8_t*>(context);
+    data[static_cast<uint32_t>(y)] |= static_cast<uint8_t>(0x80u >> x);
+}
+
+void testRotated90Golden() {
+    uint8_t buffer[4] = {0};
+    uicons::Canvas canvas(buffer, 3, 4, writeFramebufferPixel);
+
+    const bool drawn = uicons::renderRotated(rowIcon, canvas, 0, 0, uicons::Rotation::Deg90);
+    assert(drawn);
+    char actual[kPbmCapacity];
+    const size_t length = toPbm(framebufferPixel, buffer, 1, 3, 4, actual, sizeof(actual));
+    checkGolden("tests/golden/rotated-90.pbm", actual, length);
+}
+
 void testProgmemAccess() {
     // Icon data lives behind UICONS_PROGMEM; every byte must round-trip
     // through readByte, which is pgm_read_byte on AVR.
@@ -130,6 +147,7 @@ int main() {
     testRowMajorGolden();
     testRowMajorClippedGolden();
     testVerticalPagesGolden();
+    testRotated90Golden();
     testProgmemAccess();
     printf("golden tests passed\n");
     return 0;
