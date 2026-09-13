@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <assert.h>
+#include <iterator>
 #include <stdint.h>
 
 #include <uicons/adapters/mono_framebuffer.h>
@@ -15,37 +17,21 @@ const uint8_t rowMajor[] = {0xa0, 0x60, 0x90};
 // The same image in vertical/page format: one byte per column, bit 0 first.
 const uint8_t vertical[] = {0x05, 0x02, 0x03, 0x04};
 
-const uicons::Icon rowIcon(rowMajor,
-                           4,
-                           3,
-                           1,
-                           sizeof(rowMajor),
-                           uicons::PixelFormat::MonoRowMajor);
-const uicons::Icon verticalIcon(vertical,
-                                4,
-                                3,
-                                4,
-                                sizeof(vertical),
+const uicons::Icon rowIcon(rowMajor, 4, 3, 1, sizeof(rowMajor), uicons::PixelFormat::MonoRowMajor);
+const uicons::Icon verticalIcon(vertical, 4, 3, 4, sizeof(vertical),
                                 uicons::PixelFormat::MonoVertical);
 
-bool framebufferPixel(const uint8_t* data,
-                      uint16_t stride,
-                      uint16_t x,
-                      uint16_t y) {
+bool framebufferPixel(const uint8_t* data, uint16_t stride, uint16_t x, uint16_t y) {
     return (data[static_cast<uint32_t>(y) * stride + x / 8u] &
             static_cast<uint8_t>(0x80u >> (x % 8u))) != 0;
 }
 
-bool pagePixel(const uint8_t* data,
-               uint16_t stride,
-               uint16_t x,
-               uint16_t y) {
+bool pagePixel(const uint8_t* data, uint16_t stride, uint16_t x, uint16_t y) {
     return (data[static_cast<uint32_t>(y / 8u) * stride + x] &
             static_cast<uint8_t>(1u << (y % 8u))) != 0;
 }
 
-void assertShape(bool (*pixel)(const uint8_t*, uint16_t, uint16_t, uint16_t),
-                 const uint8_t* data,
+void assertShape(bool (*pixel)(const uint8_t*, uint16_t, uint16_t, uint16_t), const uint8_t* data,
                  uint16_t stride) {
     const uint16_t expected[][2] = {
         {1, 1}, {3, 1}, {2, 2}, {3, 2}, {1, 3}, {4, 3},
@@ -53,13 +39,9 @@ void assertShape(bool (*pixel)(const uint8_t*, uint16_t, uint16_t, uint16_t),
 
     for (uint16_t y = 0; y < 5; ++y) {
         for (uint16_t x = 0; x < 6; ++x) {
-            bool expectedPixel = false;
-            for (const auto& point : expected) {
-                if (point[0] == x && point[1] == y) {
-                    expectedPixel = true;
-                    break;
-                }
-            }
+            const bool expectedPixel = std::any_of(
+                std::begin(expected), std::end(expected),
+                [x, y](const uint16_t* point) { return point[0] == x && point[1] == y; });
             assert(pixel(data, stride, x, y) == expectedPixel);
         }
     }
@@ -87,17 +69,12 @@ void testVerticalPages() {
 void testInvalidFormats() {
     uint8_t buffer[1] = {0};
     uicons::adapters::MonoFramebuffer framebuffer(buffer, 8, 1, 1);
-    const uicons::Icon grayscale(nullptr,
-                                 8,
-                                 1,
-                                 1,
-                                 1,
-                                 uicons::PixelFormat::Gray2);
+    const uicons::Icon grayscale(nullptr, 8, 1, 1, 1, uicons::PixelFormat::Gray2);
 
     assert(!uicons::adapters::render(grayscale, framebuffer, 0, 0));
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     testRowMajorFramebuffer();

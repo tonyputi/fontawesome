@@ -15,19 +15,13 @@ struct MonoPages {
     uint16_t height;
     uint16_t stride;
 
-    constexpr MonoPages(uint8_t* data_,
-                        uint16_t width_,
-                        uint16_t height_,
-                        uint16_t stride_)
+    constexpr MonoPages(uint8_t* data_, uint16_t width_, uint16_t height_, uint16_t stride_)
         : data(data_), width(width_), height(height_), stride(stride_) {}
 };
 
 namespace detail {
 
-inline void setPagePixel(void* context,
-                         int16_t x,
-                         int16_t y,
-                         uint32_t color) {
+inline void setPagePixel(void* context, int16_t x, int16_t y, uint32_t color) {
     MonoPages& pages = *static_cast<MonoPages*>(context);
     const uint32_t page = static_cast<uint16_t>(y) / 8u;
     const uint32_t index = page * pages.stride + static_cast<uint16_t>(x);
@@ -40,17 +34,12 @@ inline void setPagePixel(void* context,
     }
 }
 
-}  // namespace detail
+} // namespace detail
 
-inline bool render(const Icon& icon,
-                   MonoPages& pages,
-                   int16_t x,
-                   int16_t y,
-                   uint32_t color = 1) {
-    const uint16_t pageCount =
-        static_cast<uint16_t>((pages.height + 7u) / 8u);
-    if (pages.data == nullptr || pages.stride < pages.width ||
-        pages.width == 0 || pages.height == 0 || pageCount == 0) {
+inline bool render(const Icon& icon, MonoPages& pages, int16_t x, int16_t y, uint32_t color = 1) {
+    const uint16_t pageCount = static_cast<uint16_t>((pages.height + 7u) / 8u);
+    if (pages.data == nullptr || pages.stride < pages.width || pages.width == 0 ||
+        pages.height == 0 || pageCount == 0) {
         return false;
     }
 
@@ -58,5 +47,5 @@ inline bool render(const Icon& icon,
     return uicons::render(icon, canvas, x, y, color);
 }
 
-}  // namespace adapters
-}  // namespace uicons
+} // namespace adapters
+} // namespace uicons

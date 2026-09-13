@@ -38,17 +38,9 @@ struct Icon {
     uint32_t byteCount;
     PixelFormat format;
 
-    constexpr Icon(const uint8_t* data_,
-                   uint16_t width_,
-                   uint16_t height_,
-                   uint16_t stride_,
-                   uint32_t byteCount_,
-                   PixelFormat format_)
-        : data(data_),
-          width(width_),
-          height(height_),
-          stride(stride_),
-          byteCount(byteCount_),
+    constexpr Icon(const uint8_t* data_, uint16_t width_, uint16_t height_, uint16_t stride_,
+                   uint32_t byteCount_, PixelFormat format_)
+        : data(data_), width(width_), height(height_), stride(stride_), byteCount(byteCount_),
           format(format_) {}
 };
 
@@ -60,4 +52,4 @@ inline uint8_t readByte(const uint8_t* address) {
 #endif
 }
 
-}  // namespace uicons
+} // namespace uicons
