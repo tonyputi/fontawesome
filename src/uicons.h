@@ -1,5 +1,6 @@
 #pragma once
 
+#include <uicons/animation.h>
 #include <uicons/icon.h>
 #include <uicons/renderer.h>
 

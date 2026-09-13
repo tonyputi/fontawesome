@@ -177,6 +177,14 @@ def _format_text(data: dict) -> str:
             f"{row['icon']:28} {row['size']:7} {row['bytes']:6d} {row['lit']:5d} "
             f"{row['density']:7.4f} {row['cropped_bytes']:6d} {row['rle_bytes']:6d}"
         )
+    if data.get("animations"):
+        lines.append("")
+        lines.append(f"{'animation':28} {'frames':>6} {'loop':>6} {'total_ms':>8}")
+        for row in data["animations"]:
+            lines.append(
+                f"{row['name']:28} {row['frames']:6d} {row['loop']:6d} "
+                f"{row['total_duration_ms']:8d}"
+            )
     totals = data["totals"]
     lines.extend(
         [
@@ -186,6 +194,8 @@ def _format_text(data: dict) -> str:
             f"cropped bytes: {totals['cropped_bytes']}",
             f"rle bytes: {totals['rle_bytes']}",
             f"header bytes: {totals['header_bytes']}",
+            f"animations: {totals.get('animations', 0)}",
+            f"animation frames: {totals.get('animation_frames', 0)}",
         ]
     )
     return "\n".join(lines)
