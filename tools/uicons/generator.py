@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
 from .catalog import CATALOGS, IconAsset, open_catalog
+from .formats import FORMATS, PIXEL_FORMAT_ENUM, analyze, convert, stride, summarize
 
 
-_FORMATS = {"mono-vertical"}
 _IDENTIFIER = re.compile(r"[^A-Za-z0-9_]")
 
 
@@ -43,9 +43,9 @@ def validate_manifest(manifest: Dict[str, Any]) -> tuple:
         raise ValueError("manifest 'sizes' must contain positive integers")
 
     output_format = manifest.get("format", "mono-vertical")
-    if output_format not in _FORMATS:
+    if output_format not in FORMATS:
         raise ValueError(
-            "unsupported format {!r}; currently only 'mono-vertical' is available".format(output_format)
+            "unsupported format {!r}; choose one of: {}".format(output_format, ", ".join(FORMATS))
         )
 
     icons = manifest.get("icons", [])
@@ -71,7 +71,10 @@ def _format_bytes(values: Sequence[int]) -> str:
 
 
 def render_header(
-    assets: Sequence[IconAsset], manifest: Dict[str, Any], provenance: str = ""
+    assets: Sequence[IconAsset],
+    manifest: Dict[str, Any],
+    provenance: str = "",
+    output_format: str = "mono-vertical",
 ) -> str:
     """Render a stable C++11 header for the selected assets."""
 
@@ -95,14 +98,15 @@ def render_header(
     )
     for asset in assets:
         symbol = _symbol(asset)
+        packed = convert(asset.data, asset.width, asset.height, output_format)
         lines.extend(
             [
                 f"static const uint8_t {symbol}_data[] UICONS_PROGMEM = {{",
-                _format_bytes(asset.data),
+                _format_bytes(packed),
                 "};",
                 f"static const Icon {symbol}({symbol}_data, {asset.width}, {asset.height},",
-                f"                          {asset.stride}, sizeof({symbol}_data),",
-                "                          PixelFormat::MonoVertical);",
+                f"                          {stride(asset.width, output_format)}, sizeof({symbol}_data),",
+                f"                          {PIXEL_FORMAT_ENUM[output_format]});",
                 "",
             ]
         )
@@ -115,8 +119,6 @@ def build(manifest_path: Path, catalog_dir: Path, output_dir: Path) -> Path:
 
     manifest = read_manifest(manifest_path)
     _, sizes, output_format, identifiers = validate_manifest(manifest)
-    if output_format != "mono-vertical":
-        raise ValueError(f"unsupported format {output_format!r}")
     catalog_name = manifest.get("catalog", "fontawesome")
     catalog = open_catalog(catalog_name, catalog_dir)
     unsupported = sorted(set(sizes) - set(catalog.available_sizes))
@@ -130,7 +132,7 @@ def build(manifest_path: Path, catalog_dir: Path, output_dir: Path) -> Path:
         )
     canonical_identifiers = tuple(sorted({catalog.normalize_identifier(icon) for icon in identifiers}))
     assets = catalog.resolve_many(canonical_identifiers, sizes)
-    header = render_header(assets, manifest, catalog.provenance)
+    header = render_header(assets, manifest, catalog.provenance, output_format)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / "uicons_generated.h"
@@ -138,6 +140,38 @@ def build(manifest_path: Path, catalog_dir: Path, output_dir: Path) -> Path:
     temporary_path.write_text(header, encoding="utf-8", newline="\n")
     temporary_path.replace(output_path)
     return output_path
+
+
+def report(manifest_path: Path, catalog_dir: Path) -> Dict[str, Any]:
+    """Analyze the selected manifest and return deterministic footprint data."""
+
+    manifest = read_manifest(manifest_path)
+    catalog_name, sizes, output_format, identifiers = validate_manifest(manifest)
+    catalog = open_catalog(catalog_name, catalog_dir)
+    unsupported = sorted(set(sizes) - set(catalog.available_sizes))
+    if unsupported:
+        raise ValueError(
+            "sizes {} are unavailable in the {!r} catalog; available sizes: {}".format(
+                ", ".join(map(str, unsupported)),
+                catalog_name,
+                ", ".join(map(str, catalog.available_sizes)),
+            )
+        )
+    canonical_identifiers = tuple(sorted({catalog.normalize_identifier(icon) for icon in identifiers}))
+    assets = catalog.resolve_many(canonical_identifiers, sizes)
+    rows = [
+        analyze(asset.family, asset.name, asset.width, asset.height, asset.data, output_format)
+        for asset in assets
+    ]
+    header = render_header(assets, manifest, catalog.provenance, output_format)
+    totals = summarize(rows, len(header.encode("utf-8")))
+    return {
+        "catalog": catalog_name,
+        "format": output_format,
+        "provenance": catalog.provenance,
+        "icons": rows,
+        "totals": totals,
+    }
 
 
 def update_manifest(

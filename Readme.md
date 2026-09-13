@@ -64,6 +64,21 @@ preferred, and 8 is intentionally not offered (strokes collapse below a
 readable threshold). Every generated header records the Lucide version and
 ISC license. See `assets/lucide/README.md` and `examples/lucide.json`.
 
+## Formats and footprint
+
+The generator emits 1-bpp masks in `mono-vertical` (default, page-oriented
+controllers) or `mono-rowmajor` (`Adafruit_GFX`-style row layout) via the
+manifest `"format"` field; both cost the same flash for widths divisible
+by 8 and render through the same `uicons::render`. Measure any selection
+before flashing:
+
+```sh
+./scripts/uicons report --manifest uicons.json
+```
+
+See `docs/footprint.md` for the measured comparison (representative icons,
+format costs, evaluated RLE/cropping, and selective vs full-catalog bytes).
+
 ## Development quality gate
 
 The maintained C++ sources use `.clang-format`, `.clang-tidy`, and `cppcheck`.
