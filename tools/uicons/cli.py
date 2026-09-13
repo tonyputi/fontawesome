@@ -79,16 +79,10 @@ def _write_manifest(path: Path, icons: Sequence[str], sizes: Sequence[int], outp
 def _init(args: argparse.Namespace) -> None:
     if args.manifest.exists():
         raise ValueError(f"manifest already exists: {args.manifest}")
+    manifest = {"catalog": "fontawesome", "sizes": args.sizes, "format": args.format, "icons": []}
+    validate_manifest(manifest)
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
-    args.manifest.write_text(
-        json.dumps(
-            {"catalog": "fontawesome", "sizes": args.sizes, "format": args.format, "icons": []},
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    validate_manifest(read_manifest(args.manifest))
+    args.manifest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"created {args.manifest}")
 
 
