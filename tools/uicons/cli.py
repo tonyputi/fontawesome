@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import List, Optional, Sequence
 
 from .catalog import CATALOGS, open_catalog
-from .generator import build, read_manifest, update_manifest, validate_manifest
+from .formats import FORMATS
+from .generator import build, read_manifest, report, update_manifest, validate_manifest
 
 
 def _sizes(value: str) -> List[int]:
@@ -52,14 +53,19 @@ def create_parser() -> argparse.ArgumentParser:
         help="icon catalog (default: fontawesome)",
     )
     init.add_argument("--sizes", type=_sizes, default=[16], help="comma-separated sizes (default: 16)")
-    init.add_argument("--format", default="mono-vertical", help="bitmap format")
+    init.add_argument(
+        "--format",
+        choices=sorted(FORMATS),
+        default="mono-vertical",
+        help="bitmap format (default: mono-vertical)",
+    )
 
     add = commands.add_parser("add", help="add icons to the project manifest")
     add.add_argument("icons", nargs="+", help="icons in FAMILY/NAME form, for example fas/heart")
     _manifest_argument(add)
     _catalog_argument(add)
     add.add_argument("--sizes", type=_sizes, help="replace manifest sizes")
-    add.add_argument("--format", help="replace manifest format")
+    add.add_argument("--format", choices=sorted(FORMATS), help="replace manifest format")
 
     remove = commands.add_parser("remove", help="remove icons from the project manifest")
     remove.add_argument("icons", nargs="+", help="icons in FAMILY/NAME form")
@@ -73,6 +79,17 @@ def create_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("include/uicons/generated"),
         help="generated header directory (default: include/uicons/generated)",
+    )
+
+    report_parser = commands.add_parser("report", help="print the footprint of the selected manifest")
+    _manifest_argument(report_parser)
+    _catalog_argument(report_parser)
+    report_parser.add_argument(
+        "--as",
+        dest="as_",
+        choices=("text", "json"),
+        default="text",
+        help="report output style (default: text)",
     )
     return parser
 
@@ -147,11 +164,48 @@ def _build(args: argparse.Namespace) -> None:
     print(f"generated {output}")
 
 
+def _format_text(data: dict) -> str:
+    lines = [
+        f"catalog: {data['catalog']}",
+        f"format: {data['format']}",
+        f"source: {data['provenance']}",
+        "",
+        f"{'icon':28} {'size':7} {'bytes':>6} {'lit':>5} {'density':>7} {'crop':>6} {'rle':>6}",
+    ]
+    for row in data["icons"]:
+        lines.append(
+            f"{row['icon']:28} {row['size']:7} {row['bytes']:6d} {row['lit']:5d} "
+            f"{row['density']:7.4f} {row['cropped_bytes']:6d} {row['rle_bytes']:6d}"
+        )
+    totals = data["totals"]
+    lines.extend(
+        [
+            "",
+            f"icons: {totals['icons']}",
+            f"data bytes: {totals['data_bytes']}",
+            f"cropped bytes: {totals['cropped_bytes']}",
+            f"rle bytes: {totals['rle_bytes']}",
+            f"header bytes: {totals['header_bytes']}",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _report(args: argparse.Namespace) -> None:
+    data = report(args.manifest, args.catalog_dir)
+    if args.as_ == "json":
+        print(json.dumps(data, indent=2))
+    else:
+        print(_format_text(data))
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = create_parser()
     args = parser.parse_args(argv)
     try:
-        {"init": _init, "add": _add, "remove": _remove, "build": _build}[args.command](args)
+        {"init": _init, "add": _add, "remove": _remove, "build": _build, "report": _report}[
+            args.command
+        ](args)
     except (OSError, ValueError) as error:
         parser.error(str(error))
     return 0

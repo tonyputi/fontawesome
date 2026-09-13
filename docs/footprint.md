@@ -1,0 +1,90 @@
+# uIcons footprint and format comparison
+
+All numbers below are produced by the dependency-free reporter — no hardware
+needed to reproduce them:
+
+```sh
+./scripts/uicons report --manifest <manifest>
+./scripts/uicons report --manifest <manifest> --as json
+```
+
+Flash cost on device is dominated by the `UICONS_PROGMEM` data arrays, whose
+sizes are exact and platform-independent. Each icon additionally carries one
+`const Icon` metadata object (`sizeof(Icon)` is 24 bytes on the host; the
+exact placement and padding are target-dependent, and on AVR the data arrays
+stay in flash through `PROGMEM` while object placement follows the toolchain
+defaults). `header bytes` is the generated source file size, useful for
+compile-time intuition but not a device cost.
+
+## Representative icons (measured)
+
+Font Awesome, `mono-vertical`:
+
+| icon | size | bytes | lit px | density | crop bytes | RLE bytes |
+| --- | --- | --- | --- | --- | --- | --- |
+| fab/github | 16x16 | 32 | 116 | 0.453 | 32 | 48 |
+| fab/github | 32x32 | 128 | 443 | 0.433 | 124 | 142 |
+| fab/github | 64x64 | 512 | 1720 | 0.420 | 496 | 264 |
+| fas/heart | 16x16 | 32 | 158 | 0.617 | 32 | 44 |
+| fas/heart | 32x32 | 128 | 608 | 0.594 | 128 | 94 |
+| fas/heart | 64x64 | 512 | 2443 | 0.596 | 448 | 196 |
+
+Lucide, `mono-vertical`:
+
+| icon | size | bytes | lit px | density | crop bytes | RLE bytes |
+| --- | --- | --- | --- | --- | --- | --- |
+| lucide/heart | 16x16 | 32 | 54 | 0.211 | 32 | 58 |
+| lucide/heart | 24x24 | 72 | 128 | 0.222 | 72 | 130 |
+| lucide/house | 16x16 | 32 | 96 | 0.375 | 32 | 60 |
+| lucide/house | 24x24 | 72 | 172 | 0.299 | 72 | 122 |
+| lucide/settings | 16x16 | 32 | 88 | 0.344 | 32 | 56 |
+| lucide/settings | 24x24 | 72 | 184 | 0.319 | 72 | 124 |
+
+A representative 6-icon Font Awesome pack (heart + github at 16/32/64) costs
+**1344 data bytes**; the equivalent 6-asset Lucide pack (heart/house/settings
+at 16/24) costs **312 data bytes** — outline strokes are cheaper than filled
+shapes at the same raster size.
+
+## Format comparison
+
+`mono-rowmajor` produces **identical data byte counts** (1344 and 312 in the
+packs above): for widths divisible by 8, `width * pages` equals
+`height * row_bytes`. Format choice is therefore about display compatibility,
+not flash:
+
+- `mono-vertical` (default): column-major pages, LSB-first — the native layout
+  for page-oriented controllers (SSD1306-style) and the existing adapters.
+- `mono-rowmajor`: MSB-first rows — matches `Adafruit_GFX`-style
+  `drawBitmap` expectations; the generated header sets
+  `PixelFormat::MonoRowMajor` and the same `uicons::render` draws it
+  (verified: row-major `fas/heart` renders the same 158 pixels).
+
+## Evaluated and rejected as defaults
+
+- **Byte-run RLE** (`(count, value)` pairs): loses at small sizes (e.g. 70 vs
+  64 bytes for the 2-icon 16px pack, 550 vs 312 for Lucide) and only wins on
+  large dense icons (460 vs 1024 at 64px). A decoder would add flash, RAM
+  state, and per-icon timing variance. Reported for comparison; headers stay
+  uncompressed so the renderer needs no decoder.
+- **Bounding-box cropping**: saves ~6% here (1260 vs 1344) because catalog
+  icons already fill their canvas, while requiring anchor metadata and
+  complicating clipping. Reported as `crop bytes`; not emitted.
+- **Naive resampling to new sizes**: rejected. Font Awesome ships checked-in
+  masters only at 16/32/64; Lucide strokes collapse below 16px (see
+  `assets/lucide/README.md`). Small icons must be checked masters, never
+  silent downscales — hence per-catalog size validation with actionable
+  errors.
+
+## Selective generation is the default path
+
+The full checked-in Font Awesome catalog holds 1611 icons per size:
+
+| size | full catalog data | 2-icon selective pack |
+| --- | --- | --- |
+| 16 | 51552 bytes | 64 bytes |
+| 32 | 206208 bytes | 256 bytes |
+| 64 | 824832 bytes | 1024 bytes |
+
+The generator only ever emits the manifest selection; there is no code path
+that includes unused icons. The `report` command makes the saving visible
+before flashing.
