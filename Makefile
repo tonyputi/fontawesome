@@ -17,7 +17,7 @@ UICONS := $(PYTHON) $(ROOT_DIR)/scripts/uicons
 
 EXAMPLES := $(wildcard $(ROOT_DIR)/examples/*.json)
 
-.PHONY: help quality test build report package clean
+.PHONY: help quality test build report package examples clean
 
 help: ## Show this help.
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort | \
@@ -40,6 +40,12 @@ report: ## Print the footprint report for every example manifest.
 		echo "=== $$(basename "$$manifest") ==="; \
 		$(UICONS) report --manifest "$$manifest"; \
 	done
+
+examples: ## Build every PlatformIO example (basic native + display AVR).
+	@pio run -d $(ROOT_DIR)/examples/basic -e native -t exec
+	@pio run -d $(ROOT_DIR)/examples/display_u8g2 -e uno
+	@pio run -d $(ROOT_DIR)/examples/display_adafruit -e uno
+	@pio run -d $(ROOT_DIR)/examples/display_tiny4koled -e uno
 
 package: ## Create the PlatformIO package tarball in $(BUILD_DIR)/.
 	@mkdir -p "$(BUILD_DIR)"
