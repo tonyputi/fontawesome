@@ -15,6 +15,7 @@ HAND_WRITTEN_CPP=(
     src/uicons/adapters/mono_pages.h
     tests/uicons_renderer_test.cpp
     tests/uicons_api_test.cpp
+    tests/uicons_golden_test.cpp
 )
 
 for command in clang-format clang-tidy cppcheck pio; do
@@ -40,12 +41,27 @@ printf '%s\n' '== host tests =='
     -Isrc tests/uicons_api_test.cpp \
     -o "$BUILD_DIR/uicons_api_test"
 "$BUILD_DIR/uicons_api_test"
+"${CXX:-c++}" \
+    -std=c++11 \
+    -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
+    -Isrc tests/uicons_golden_test.cpp \
+    -o "$BUILD_DIR/uicons_golden_test"
+"$BUILD_DIR/uicons_golden_test"
 
 printf '%s\n' '== Python generator tests =='
 python3 -m unittest discover --start-directory tests --pattern 'test_*.py'
 
+printf '%s\n' '== generation drift =='
+for manifest in examples/uicons.json examples/lucide.json; do
+    name="$(basename "$manifest" .json)"
+    ./scripts/uicons build --manifest "$manifest" --output-dir "$BUILD_DIR/gen-a-$name" >/dev/null
+    ./scripts/uicons build --manifest "$manifest" --output-dir "$BUILD_DIR/gen-b-$name" >/dev/null
+    cmp "$BUILD_DIR/gen-a-$name/uicons_generated.h" "$BUILD_DIR/gen-b-$name/uicons_generated.h"
+    ./scripts/uicons report --manifest "$manifest" >/dev/null
+done
+
 printf '%s\n' '== clang-tidy =='
-clang-tidy tests/uicons_renderer_test.cpp tests/uicons_api_test.cpp --quiet -- \
+clang-tidy tests/uicons_renderer_test.cpp tests/uicons_api_test.cpp tests/uicons_golden_test.cpp --quiet -- \
     -std=c++11 -Wall -Wextra -Wpedantic -Isrc
 
 printf '%s\n' '== cppcheck =='
@@ -63,7 +79,8 @@ cppcheck \
     src/uicons/adapters/mono_framebuffer.h \
     src/uicons/adapters/mono_pages.h \
     tests/uicons_renderer_test.cpp \
-    tests/uicons_api_test.cpp
+    tests/uicons_api_test.cpp \
+    tests/uicons_golden_test.cpp
 
 printf '%s\n' '== PlatformIO package =='
 pio pkg pack --output "$BUILD_DIR/uicons.tar.gz" . >/dev/null
