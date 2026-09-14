@@ -46,6 +46,7 @@ examples: ## Build every PlatformIO example (native + AVR Uno + ESP32 smoke).
 	@pio run -d $(ROOT_DIR)/examples/display_u8g2 -e uno
 	@pio run -d $(ROOT_DIR)/examples/display_adafruit -e uno
 	@pio run -d $(ROOT_DIR)/examples/display_tiny4koled -e uno
+	@pio run -d $(ROOT_DIR)/examples/simavr_uno -e uno
 	@pio run -d $(ROOT_DIR)/examples/target_esp32 -e esp32dev
 
 # Single implementation lives in scripts/quality.sh (phase_package, with leak

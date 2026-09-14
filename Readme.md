@@ -134,7 +134,7 @@ Sources are held to `.clang-format`, `.clang-tidy`, and `cppcheck`; host,
 golden, generator, and on-hardware-compile checks run in one gate:
 
 ```sh
-make quality   # full gate (format, tests, determinism, stale, examples, analysis, package)
+make quality   # full gate (format, tests, determinism, stale, examples, simtest, analysis, package)
 make examples  # build every PlatformIO example (basic native + display AVR)
 make build     # build every examples/*.json manifest into build/<name>/
 make report    # footprint report for every example manifest
