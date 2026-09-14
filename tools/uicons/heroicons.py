@@ -1,7 +1,7 @@
 """Pinned Heroicons outline pack metadata.
 
 Heroicons outlines are stroke-based SVGs on a 24x24 grid, so they reuse the
-shared dependency-free stroke pipeline in ``lucide.py`` verbatim. This module
+shared dependency-free stroke pipeline in ``stroke.py`` verbatim. This module
 only carries the pack-specific metadata (sizes, aliases, source, license);
 solid icons are intentionally out of scope because they are fill-based and
 the converter paints strokes only.
@@ -12,7 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Tuple
 
-from .lucide import pixel_density, rasterize_svg
+from .stroke import pixel_density, rasterize_svg
 
 SIZES = (16, 24)
 SOURCE_URL = "https://github.com/tailwindlabs/heroicons"

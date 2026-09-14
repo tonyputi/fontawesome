@@ -7,7 +7,8 @@ from pathlib import Path
 from tools.uicons.catalog import HeroiconsCatalog, open_catalog
 from tools.uicons.cli import main
 from tools.uicons.generator import build
-from tools.uicons.heroicons import SIZES, pixel_density, rasterize_svg, read_pack_metadata
+from tools.uicons.heroicons import SIZES, read_pack_metadata
+from tools.uicons.stroke import pixel_density, rasterize_svg
 
 ROOT = Path(__file__).resolve().parents[1]
 ICONS_DIR = ROOT / "assets" / "heroicons" / "icons"

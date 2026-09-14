@@ -1,7 +1,7 @@
 # Lucide icon pack
 
 Vendored, pinned Lucide sources converted offline to embedded mono-vertical
-bitmaps by `tools/uicons/lucide.py` (Python standard library only).
+bitmaps by `tools/uicons/stroke.py` (Python standard library only).
 
 - Pinned release: see `VERSION` (upstream `https://github.com/lucide-icons/lucide`)
 - License: ISC, see `LICENSE-ISC.txt`

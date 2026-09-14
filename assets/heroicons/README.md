@@ -2,7 +2,7 @@
 
 Vendored, pinned Heroicons outline sources converted offline to embedded
 mono-vertical bitmaps by the shared stroke pipeline in
-`tools/uicons/lucide.py` (Python standard library only).
+`tools/uicons/stroke.py` (Python standard library only).
 
 - Pinned release: see `VERSION` (upstream `https://github.com/tailwindlabs/heroicons`)
 - License: MIT, see `LICENSE-MIT.txt`

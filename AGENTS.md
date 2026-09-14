@@ -70,7 +70,7 @@ Environment notes: `clang-format`/`clang-tidy` live under
   `examples/<pack>.json` in the drift loop, MIT/ISC-class license only,
   attribution in `assets/LICENSE.txt`, catalog table in `Readme.md`.
 - Only outline/stroke SVG packs reuse the pipeline in
-  `tools/uicons/lucide.py`; fill-based styles need a new rasterizer (out of
+  `tools/uicons/stroke.py`; fill-based styles need a new rasterizer (out of
   scope until requested).
 - Filenames/identifiers: `family/name` (`fas/heart`, `lucide/house`,
   `heroicons/home`); aliases canonicalized in the catalog, never at runtime.
