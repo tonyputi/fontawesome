@@ -2,14 +2,16 @@
   "name": "uicons",
   "version": "0.1.0",
   "description": "Embedded icons with selectable catalogs, sizes, and display formats",
-  "keywords": ["icons", "embedded", "platformio", "bitmap", "u8g2"],
+  "homepage": "https://github.com/tonyputi/uicons",
+  "keywords": ["icons", "embedded", "fontawesome", "lucide", "oled", "ssd1306", "u8g2", "bitmap"],
   "repository": {
     "type": "git",
     "url": "https://github.com/tonyputi/uicons.git"
   },
   "authors": [
     {
-      "name": "nomadnt-iot"
+      "name": "nomadnt-iot",
+      "url": "https://github.com/tonyputi"
     }
   ],
   "license": "MIT",
