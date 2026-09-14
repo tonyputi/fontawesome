@@ -180,6 +180,17 @@ phase_package() {
         printf '%s\n' 'error: package leaks development files' >&2
         exit 1
     fi
+    # Boundary from the README: runtime + frozen legacy must ship, nothing else.
+    for required in src/uicons.h src/uicons/icon.h src/fontawesome.h library.json; do
+        if ! grep -qxF "$required" "$BUILD_DIR/package-contents.txt"; then
+            printf 'error: package is missing required %s\n' "$required" >&2
+            exit 1
+        fi
+    done
+    if ! grep -q '^src/vertical/' "$BUILD_DIR/package-contents.txt"; then
+        printf '%s\n' 'error: package is missing the frozen src/vertical catalog' >&2
+        exit 1
+    fi
 }
 
 ALL_PHASES=(format host python drift examples tidy cppcheck package)
