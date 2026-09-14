@@ -77,7 +77,7 @@ for manifest in examples/uicons.json examples/lucide.json examples/animation.jso
 done
 
 printf '%s\n' '== example headers drift =='
-for example in examples/basic examples/display_u8g2 examples/display_adafruit examples/display_tiny4koled; do
+for example in examples/basic examples/display_u8g2 examples/display_adafruit examples/display_tiny4koled examples/target_esp32; do
     ./scripts/uicons build --manifest "$example/uicons.json" --output-dir "$BUILD_DIR/gen-example" >/dev/null
     if ! cmp -s "$BUILD_DIR/gen-example/uicons_generated.h" "$example/include/uicons_generated.h"; then
         printf 'drift detected: %s\n' "$example" >&2

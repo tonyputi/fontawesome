@@ -1,0 +1,6 @@
+{
+  "catalog": "fontawesome",
+  "sizes": [16],
+  "format": "mono-vertical",
+  "icons": ["fas/heart"]
+}
