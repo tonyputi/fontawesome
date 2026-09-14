@@ -84,6 +84,7 @@ phase_versions() {
     version_line clang-tidy
     version_line cppcheck
     version_line pio
+    version_line ruff
 }
 
 phase_format() {
@@ -112,6 +113,12 @@ phase_host() {
 }
 
 phase_python() {
+    command -v ruff >/dev/null || {
+        echo "error: ruff not found (dev-only lint): pip install 'ruff==0.16.7'" >&2
+        exit 1
+    }
+    printf '%s\n' '== Python lint (dev-only, stdlib runtime untouched) =='
+    ruff check tools/ tests/
     printf '%s\n' '== Python generator tests =='
     python3 -m unittest discover --start-directory tests --pattern 'test_*.py'
 }

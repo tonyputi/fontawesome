@@ -53,7 +53,7 @@ jobs:
             clang-format \
             clang-tidy \
             cppcheck
-          python -m pip install --disable-pip-version-check 'platformio==6.2.0'
+          python -m pip install --disable-pip-version-check 'platformio==6.2.0' 'ruff==0.16.7'
 
       - name: Run quality gate
         run: ./scripts/quality.sh
