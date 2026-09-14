@@ -1,8 +1,11 @@
-"""Read the checked-in Font Awesome bitmap catalog.
+"""Shared catalog plumbing for the three icon packs.
 
-The generator intentionally consumes the repository's existing bitmap headers
-instead of rasterizing fonts. This keeps normal generation deterministic and
-free of Inkscape, ImageMagick, FreeType, or network dependencies.
+Each pack has a metadata module (``fontawesome``, ``lucide``, ``heroicons``)
+carrying its families/sizes/aliases/source/license; the ``*Catalog`` classes
+below implement the pack backends. Font Awesome intentionally consumes the
+repository's existing bitmap headers instead of rasterizing fonts, which keeps
+generation deterministic and free of Inkscape, ImageMagick, FreeType, or
+network dependencies.
 """
 
 from __future__ import annotations
@@ -12,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from .fontawesome import FAMILY_ALIASES as _FAMILY_ALIASES
 from .heroicons import ALIASES as _HEROICONS_ALIASES
 from .heroicons import SIZES as _HEROICONS_SIZES
 from .heroicons import SOURCE_URL as _HEROICONS_SOURCE_URL
@@ -34,15 +38,6 @@ _ICON = re.compile(
     re.DOTALL,
 )
 _BYTE = re.compile(r"0[xX][0-9a-fA-F]+|[0-9]+")
-
-_FAMILY_ALIASES = {
-    "fas": "fas",
-    "solid": "fas",
-    "far": "far",
-    "regular": "far",
-    "fab": "fab",
-    "brands": "fab",
-}
 
 
 @dataclass(frozen=True)

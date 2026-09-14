@@ -64,7 +64,10 @@ Environment notes: `clang-format`/`clang-tidy` live under
   -Wshadow -Werror` on host tests; `.clang-format` (100 cols) is law.
 - Python: `ruff check` (`E,F`, 100 cols, E501 exempted only for test data);
   `.python-version` is `3.12`.
-- Catalog additions: new `*Catalog` class mirroring `LucideCatalog`, one line
+- Catalog additions: new `*Catalog` class mirroring `LucideCatalog` plus a
+  `<pack>.py` metadata module mirroring `heroicons.py` (`SIZES`, `ALIASES`,
+  `SOURCE_URL`, `LICENSE_NAME`; bitmap-backed `fontawesome.py` carries
+  families/aliases only, no `SIZES`/`read_pack_metadata`), one line
   in `CATALOGS`, vendored SVGs under `assets/<pack>/` with `VERSION` +
   `SOURCE.md` + license file (force-add: `assets/` is gitignored),
   `examples/<pack>.json` in the drift loop, MIT/ISC-class license only,
