@@ -1,58 +1,59 @@
 # uIcons
 
-Embedded bitmap icons for PlatformIO and Arduino projects.
+[![quality](https://github.com/tonyputi/uicons/actions/workflows/quality.yml/badge.svg)](https://github.com/tonyputi/uicons/actions/workflows/quality.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> The repository is being migrated from its original Font Awesome-only layout.
-> The current Font Awesome headers remain available for compatibility while the
-> provider-independent uIcons API is introduced.
+**Embedded bitmap icons without the bloat: declare the icons you use, generate
+a tiny header, render on any display — from 32 bytes of flash per 16×16 icon.**
 
-## Current status
+Full Font Awesome catalogs ship tens of kilobytes you never draw. uIcons flips
+the model: a manifest lists exactly the icons and sizes your firmware needs,
+an offline generator emits only those bytes, and a display-independent
+renderer draws them through whatever graphics library you already use.
 
-- Font Awesome Solid, Regular, and Brands bitmap assets are still available.
-- Legacy assets are available in 16x16, 32x32, and 64x64 sizes.
-- The public `uicons` API defines icon metadata and storage formats.
-- A pinned Lucide outline pack is available through the same generator and API.
-- Product scope, non-goals, and the minimum viable workflow are defined in
-  `docs/differentiation.md`.
-- Display renderers, selective generation, and animations are
-  planned as tracked work in [issue #1](https://github.com/tonyputi/uicons/issues/1).
-
-## Include the public API
-
-```cpp
-#include <uicons.h>
-```
-
-The legacy Font Awesome umbrella header is still supported:
-
-```cpp
-#include <fontawesome.h>
-```
-
-## Selective generation
-
-The repository-local generator uses only Python's standard library and the
-checked-in bitmap catalog. It does not require Inkscape, ImageMagick, a font
-rasterizer, or network access during normal builds:
+## 60-second quickstart
 
 ```sh
 ./scripts/uicons init
-./scripts/uicons add fas/heart fab/github --sizes 16
+./scripts/uicons add fas/heart --sizes 16
 ./scripts/uicons build
+./scripts/uicons report --manifest uicons.json
 ```
 
-This writes the selected assets to `include/uicons/generated/uicons_generated.h`.
-Aliases such as `solid/heart` are canonicalized to `fas/heart`; unsupported
-icons and sizes fail with an actionable error. Removing an icon from `uicons.json`
-and running `build` rewrites the header without that icon. See
-`examples/uicons.json` for a manifest example.
+```cpp
+#include <uicons.h>
+#include <uicons_generated.h>
 
-## Lucide icon pack
+uint8_t buffer[32] = {0};
+uicons::adapters::MonoPages pages(buffer, 16, 16, 16);
+uicons::adapters::render(uicons::generated::fas_heart_16x16, pages, 0, 0);
+```
 
-Lucide is available as a second catalog through the same core API
-(`uicons::Icon`, `uicons::PixelFormat::MonoVertical`, `uicons::render`).
-The pack vendors pinned upstream SVGs and converts them offline with the
-standard library only:
+That is the whole workflow: manifest → header → pixels. Generation needs only
+Python's standard library — no Inkscape, ImageMagick, rasterizer, or network.
+
+## Works with your display
+
+uIcons never depends on a display library. Pick the wiring for the one you
+already use; every path below compiles in CI (see `examples/`).
+
+| Display library | Manifest format | Wiring | Cost |
+|---|---|---|---|
+| [Adafruit GFX](docs/displays.md#adafruit-gfx-examplesdisplay_adafruit) | `mono-rowmajor` | `drawBitmap` direct, zero glue | +0 bytes RAM |
+| [U8g2](docs/displays.md#u8g2-examplesdisplay_u8g2) | any | `Canvas` → `drawPixel`, 5 lines | one call per pixel |
+| [Tiny4kOLED](docs/displays.md#tiny4koled-examplesdisplay_tiny4koled) | `mono-vertical` | `oled.bitmap` window, zero copy | +0 bytes RAM |
+
+Details, bit-order rationale, and copy-paste snippets: [`docs/displays.md`](docs/displays.md).
+
+## Two catalogs, one API
+
+Both catalogs render through the same `uicons::Icon` + `uicons::render`:
+
+- **Font Awesome** (`fas` solid, `far` regular, `fab` brands) — checked-in
+  masters at 16/32/64 px. Brands live here only.
+- **Lucide** (pinned 1.39.0, ISC) — outline icons converted offline from
+  vendored SVGs at 16 px (minimum) and 24 px (preferred). Strokes collapse
+  below 16 px, so smaller sizes are refused instead of silently downscaled.
 
 ```sh
 ./scripts/uicons init --manifest uicons-lucide.json --catalog lucide --sizes 16,24
@@ -60,66 +61,61 @@ standard library only:
 ./scripts/uicons build --manifest uicons-lucide.json
 ```
 
-Lucide icons are outline-based and carry no brand logos; brands remain
-Font Awesome `fab` only. Size 16 is the minimum recommended raster, 24 is
-preferred, and 8 is intentionally not offered (strokes collapse below a
-readable threshold). Every generated header records the Lucide version and
-ISC license. See `assets/lucide/README.md` and `examples/lucide.json`.
+Every generated header records its catalog provenance and license.
 
-## Formats and footprint
+## Footprint, measured not promised
 
-The generator emits 1-bpp masks in `mono-vertical` (default, page-oriented
-controllers) or `mono-rowmajor` (`Adafruit_GFX`-style row layout) via the
-manifest `"format"` field; both cost the same flash for widths divisible
-by 8 and render through the same `uicons::render`. Measure any selection
-before flashing:
+| icon | size | data bytes | lit px |
+|---|---|---|---|
+| fas/heart | 16×16 | 32 | 158 |
+| fas/heart | 32×32 | 128 | 608 |
+| fas/heart | 64×64 | 512 | 2443 |
+| lucide/heart | 16×16 | 32 | 54 |
+| lucide/house | 24×24 | 72 | 172 |
 
-```sh
-./scripts/uicons report --manifest uicons.json
-```
+A 6-asset Font Awesome pack (heart + github at 16/32/64) costs **1344 data
+bytes**; shipping the full 16 px catalog instead would cost **51552 bytes**.
+`mono-rowmajor` costs identical bytes for widths divisible by 8 — format choice
+is about display compatibility, not flash. Full numbers, per-target mapping
+(AVR PROGMEM vs ARM unified flash), and evaluated-but-rejected compression:
+[`docs/footprint.md`](docs/footprint.md).
 
-See `docs/footprint.md` for the measured comparison (representative icons,
-format costs, evaluated RLE/cropping, and selective vs full-catalog bytes).
+## Non-blocking animations
 
-## Animations
-
-Pre-rendered frame animations play through a non-blocking player: the app
-passes `now` (e.g. `millis()`) to `uicons::update`/`uicons::draw`, and
-nothing calls `delay()` or owns the scheduler. Animations are generated only
-when listed in the manifest `"animations"` array, and frames may only
-reference already-selected icons and sizes:
+Pre-rendered frame animations play through a player that never calls `delay()`
+and never owns your scheduler — your app passes `now` (e.g. `millis()`):
 
 ```sh
 ./scripts/uicons build --manifest examples/animation.json
-./scripts/uicons report --manifest examples/animation.json
 ```
 
-See `docs/animations.md` and `examples/animation.json`.
+Frames reuse already-selected icon bitmaps, so animation adds metadata only,
+no duplicate pixel data. See [`docs/animations.md`](docs/animations.md).
 
-## Development quality gate
+## Status
 
-The maintained C++ sources use `.clang-format`, `.clang-tidy`, and `cppcheck`.
-Generated icon data under `src/vertical/` is deliberately excluded from these
-checks. Run the complete local gate with:
+Shipped and gated: selective generation, Lucide pack, both pixel formats,
+rotation, animations, display wiring, and compilable examples. What is still
+open lives in [GitHub issues](https://github.com/tonyputi/uicons/issues):
+multi-target CI beyond AVR, registry metadata polish, and the quality-gate
+wishlist. Scope and non-goals: [`docs/differentiation.md`](docs/differentiation.md).
 
-```sh
-./scripts/quality.sh
+The legacy full-catalog header is still available for compatibility:
+
+```cpp
+#include <fontawesome.h>  // legacy: pulls every icon; new code uses <uicons.h>
 ```
 
-The GitHub Actions workflow runs the same single-job gate. It intentionally does
-not use a board matrix: hardware compilation can be added later when it provides
-more value than its CI cost.
+## Development
 
-## Makefile
-
-A thin convenience wrapper delegates to the canonical scripts (`make help`
-lists everything):
+Sources are held to `.clang-format`, `.clang-tidy`, and `cppcheck`; host,
+golden, generator, and on-hardware-compile checks run in one gate:
 
 ```sh
-make quality   # full gate, same as ./scripts/quality.sh
+make quality   # full gate (format, tests, drift, examples, analysis, package)
+make examples  # build every PlatformIO example (basic native + display AVR)
 make build     # build every examples/*.json manifest into build/<name>/
 make report    # footprint report for every example manifest
-make clean     # remove build/ output and Python caches
 ```
 
 ## License
