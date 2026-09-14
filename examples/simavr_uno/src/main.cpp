@@ -51,6 +51,19 @@ void setup() {
         }
     }
     char count[8] = {0};
+    // Dump the framebuffer as ASCII art so a human (or a serial monitor)
+    // can SEE the icon: '#' is a lit pixel, '.' is background. MonoPages
+    // stores page-major bytes, so row y, column x lives in bit (y % 8) of
+    // byte (y / 8) * 16 + x (see setPagePixel in mono_pages.h).
+    printPoll("SIMAVR-TEST art:\n");
+    for (uint8_t y = 0; y < 16; ++y) {
+        for (uint8_t x = 0; x < 16; ++x) {
+            const uint8_t byte =
+                s_buffer[static_cast<size_t>(y) / 8u * 16u + x];
+            putcPoll(((byte >> (y % 8u)) & 1u) != 0 ? '#' : '.');
+        }
+        putcPoll('\n');
+    }
     printPoll("SIMAVR-TEST drawn=");
     putcPoll(drawn ? '1' : '0');
     printPoll(" lit=");
