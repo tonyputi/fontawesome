@@ -2,9 +2,10 @@
 # uIcons quality gate: identical locally and in CI.
 #
 # Run everything (the default) or iterate on one phase:
-#   ./scripts/quality.sh [all|format|host|python|drift|examples|tidy|cppcheck|package]...
+#   ./scripts/quality.sh [all|format|host|python|determinism|stale|examples|tidy|cppcheck|package]...
 #
-# Phase order for a full run: format, host, python, drift, examples, tidy,
+# Phase order for a full run: format, host, python, determinism, stale,
+# examples, tidy,
 # cppcheck, package. The versions preamble always runs first so a failure log
 # records the exact toolchain. Steps that are chatty on success (generator
 # builds, PlatformIO builds, packaging) log to files and only print their
@@ -123,21 +124,26 @@ phase_python() {
     python3 -m unittest discover --start-directory tests --pattern 'test_*.py'
 }
 
-phase_drift() {
-    printf '%s\n' '== generation drift =='
+# determinism proves the generator is byte-stable (two builds, one cmp); it
+# says nothing about committed artifacts. stale proves the checked-in
+# examples/*/include headers match what the manifests generate today.
+phase_determinism() {
+    printf '%s\n' '== generation determinism =='
     for manifest in examples/uicons.json examples/lucide.json examples/heroicons.json examples/animation.json; do
         name="$(basename "$manifest" .json)"
-        run_quiet "drift-$name-a" ./scripts/uicons build --manifest "$manifest" --output-dir "$BUILD_DIR/gen-a-$name"
-        run_quiet "drift-$name-b" ./scripts/uicons build --manifest "$manifest" --output-dir "$BUILD_DIR/gen-b-$name"
+        run_quiet "determinism-$name-a" ./scripts/uicons build --manifest "$manifest" --output-dir "$BUILD_DIR/gen-a-$name"
+        run_quiet "determinism-$name-b" ./scripts/uicons build --manifest "$manifest" --output-dir "$BUILD_DIR/gen-b-$name"
         cmp "$BUILD_DIR/gen-a-$name/uicons_generated.h" "$BUILD_DIR/gen-b-$name/uicons_generated.h"
         run_quiet "report-$name" ./scripts/uicons report --manifest "$manifest"
     done
+}
 
-    printf '%s\n' '== example headers drift =='
+phase_stale() {
+    printf '%s\n' '== committed generated headers =='
     for example in examples/basic examples/display_u8g2 examples/display_adafruit examples/display_tiny4koled examples/target_esp32; do
-        run_quiet "drift-$example" ./scripts/uicons build --manifest "$example/uicons.json" --output-dir "$BUILD_DIR/gen-example"
+        run_quiet "stale-$example" ./scripts/uicons build --manifest "$example/uicons.json" --output-dir "$BUILD_DIR/gen-example"
         if ! cmp "$BUILD_DIR/gen-example/uicons_generated.h" "$example/include/uicons_generated.h"; then
-            printf 'drift detected: %s\n' "$example" >&2
+            printf 'stale generated header: %s\n' "$example" >&2
             exit 1
         fi
     done
@@ -148,13 +154,28 @@ phase_examples() {
     run_quiet examples make -C "$ROOT_DIR" examples
 }
 
+# Hand-written headers analyzed as translation units, not just via
+# HeaderFilterRegex when included by the tests: this makes src/ coverage
+# explicit. The pack golden test includes the generated header, so tidy
+# rebuilds it first and works standalone (no host phase required).
+TIDY_HEADERS=(
+    src/uicons.h
+    src/uicons/animation.h
+    src/uicons/icon.h
+    src/uicons/renderer.h
+    src/uicons/adapters/mono_framebuffer.h
+    src/uicons/adapters/mono_pages.h
+)
+
 phase_tidy() {
     need clang-tidy
     need "$CXX_BIN"
     printf '%s\n' '== clang-tidy =='
     gen_golden_header
-    clang-tidy tests/uicons_renderer_test.cpp tests/uicons_api_test.cpp tests/uicons_golden_test.cpp tests/uicons_animation_test.cpp tests/uicons_pack_golden_test.cpp --quiet -- -I"$BUILD_DIR/gen-golden" \
-        -std=c++11 -Wall -Wextra -Wpedantic -Isrc
+    # -x c++ forces headers onto the C++ path; without it clang-tidy
+    # parses .h inputs as C and rejects -std=c++11.
+    clang-tidy "${TIDY_HEADERS[@]}" tests/uicons_renderer_test.cpp tests/uicons_api_test.cpp tests/uicons_golden_test.cpp tests/uicons_animation_test.cpp tests/uicons_pack_golden_test.cpp --quiet -- -I"$BUILD_DIR/gen-golden" \
+        -x c++ -std=c++11 -Wall -Wextra -Wpedantic -Isrc
 }
 
 phase_cppcheck() {
@@ -173,9 +194,13 @@ phase_cppcheck() {
 
 phase_package() {
     need pio
-    run_quiet package pio pkg pack --output "$BUILD_DIR/uicons.tar.gz" .
+    # UICONS_PACKAGE_OUTPUT lets `make package` reuse this exact logic while
+    # keeping its own output location; the gate default stays hermetic.
+    output="${UICONS_PACKAGE_OUTPUT:-"$BUILD_DIR/uicons.tar.gz"}"
+    mkdir -p "$(dirname "$output")"
+    run_quiet package pio pkg pack --output "$output" .
     printf '%s\n' '== PlatformIO package =='
-    tar -tzf "$BUILD_DIR/uicons.tar.gz" | sort > "$BUILD_DIR/package-contents.txt"
+    tar -tzf "$output" | sort > "$BUILD_DIR/package-contents.txt"
     if grep -E '(^|/)(assets|scripts|tools|tests|build)/' "$BUILD_DIR/package-contents.txt"; then
         printf '%s\n' 'error: package leaks development files' >&2
         exit 1
@@ -193,7 +218,7 @@ phase_package() {
     fi
 }
 
-ALL_PHASES=(format host python drift examples tidy cppcheck package)
+ALL_PHASES=(format host python determinism stale examples tidy cppcheck package)
 
 USAGE_PHASES="$(IFS='|'; echo "${ALL_PHASES[*]}")"
 
@@ -214,7 +239,7 @@ for phase in "${SELECTED[@]}"; do
     case "$phase" in
         all) EXPANDED+=("${ALL_PHASES[@]}") ;;
         versions) ;;
-        format | host | python | drift | examples | tidy | cppcheck | package) EXPANDED+=("$phase") ;;
+        format | host | python | determinism | stale | examples | tidy | cppcheck | package) EXPANDED+=("$phase") ;;
         *) usage ;;
     esac
 done
