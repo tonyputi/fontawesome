@@ -107,6 +107,23 @@ The legacy full-catalog header is still available for compatibility:
 #include <fontawesome.h>  // legacy: pulls every icon; new code uses <uicons.h>
 ```
 
+## What ships vs what is dev-only
+
+The package boundary is enforced by `library.json` (`export.exclude`) and
+checked by the `package` gate phase:
+
+- **Shipped runtime** (`src/uicons/`, `src/uicons.h`): hand-written,
+  provider-neutral, linted and analyzed.
+- **Shipped legacy** (`src/fontawesome.h`, `src/vertical/`): frozen bitmap
+  blobs for `<fontawesome.h>` compatibility. They also serve as the pinned
+  input of the Font Awesome generator catalog, so they must stay in `src/`
+  (moving them would break legacy includes) and must never be hand-edited.
+- **Dev-only, never shipped** (`tools/`, `assets/`, `tests/`, `scripts/`,
+  `examples/*.json`): generator, sources, and checks.
+- **User-generated, never committed to `src/`** (`uicons_generated.h`):
+  produced by `./scripts/uicons build` from your manifest; examples check in
+  their copy under `examples/*/include/` so CI can drift-check it.
+
 ## Development
 
 Sources are held to `.clang-format`, `.clang-tidy`, and `cppcheck`; host,

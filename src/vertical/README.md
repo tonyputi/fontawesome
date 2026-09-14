@@ -15,3 +15,8 @@ CLI and include the generated header instead:
 The catalog is consumed as a pinned, checked-in source by the deterministic
 uIcons generator. Provider-specific names stay inside the catalog/generator
 boundary; runtime code uses `uicons::Icon` and `uicons::PixelFormat`.
+
+Dual role, one rule: these blobs are both the shipped legacy payload (required
+by `<fontawesome.h>`) and the generator input, so they live in `src/` and are
+frozen. Never hand-edit them; any change must come as a deliberate,
+reviewed re-vendor, not a drive-by edit.
