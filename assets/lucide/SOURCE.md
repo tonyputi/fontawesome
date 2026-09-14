@@ -9,7 +9,7 @@
 
 The SVGs in `icons/` are verbatim copies of the upstream files at the pinned
 tag. They are converted to embedded mono-vertical bitmaps by the
-dependency-free converter in `tools/uicons/lucide.py` using only the Python
+dependency-free converter in `tools/uicons/stroke.py` using only the Python
 standard library. No font rasterizer, image tool, or network access is needed
 during normal builds.
 

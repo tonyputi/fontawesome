@@ -15,14 +15,12 @@ from typing import Dict, Iterable, List, Optional, Tuple
 from .heroicons import ALIASES as _HEROICONS_ALIASES
 from .heroicons import SIZES as _HEROICONS_SIZES
 from .heroicons import SOURCE_URL as _HEROICONS_SOURCE_URL
-from .heroicons import pixel_density as _heroicons_density
-from .heroicons import rasterize_svg as _rasterize_heroicons_svg
 from .heroicons import read_pack_metadata as _heroicons_pack_metadata
 from .lucide import ALIASES as _LUCIDE_ALIASES
 from .lucide import SIZES as _LUCIDE_SIZES
-from .lucide import pixel_density as _lucide_density
-from .lucide import rasterize_svg as _rasterize_lucide_svg
 from .lucide import read_pack_metadata as _lucide_pack_metadata
+from .stroke import pixel_density as _stroke_density
+from .stroke import rasterize_svg as _rasterize_svg
 
 
 
@@ -246,8 +244,8 @@ class LucideCatalog:
                 f"icon {canonical!r} is not in the vendored Lucide subset; "
                 f"available icons: {', '.join(self.available_icons())}"
             ) from error
-        data = _rasterize_lucide_svg(source, size)
-        if _lucide_density(data) == 0.0:
+        data = _rasterize_svg(source, size)
+        if _stroke_density(data) == 0.0:
             raise ValueError(f"icon {canonical!r} rasterized empty at {size}x{size}")
         return IconAsset(
             family="lucide",
@@ -329,8 +327,8 @@ class HeroiconsCatalog:
                 f"icon {canonical!r} is not in the vendored Heroicons subset; "
                 f"available icons: {', '.join(self.available_icons())}"
             ) from error
-        data = _rasterize_heroicons_svg(source, size)
-        if _heroicons_density(data) == 0.0:
+        data = _rasterize_svg(source, size)
+        if _stroke_density(data) == 0.0:
             raise ValueError(f"icon {canonical!r} rasterized empty at {size}x{size}")
         return IconAsset(
             family="heroicons",
