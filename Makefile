@@ -48,9 +48,10 @@ examples: ## Build every PlatformIO example (native + AVR Uno + ESP32 smoke).
 	@pio run -d $(ROOT_DIR)/examples/display_tiny4koled -e uno
 	@pio run -d $(ROOT_DIR)/examples/target_esp32 -e esp32dev
 
+# Single implementation lives in scripts/quality.sh (phase_package, with leak
+# and must-ship checks); this target only pins the output location.
 package: ## Create the PlatformIO package tarball in $(BUILD_DIR)/.
-	@mkdir -p "$(BUILD_DIR)"
-	@pio pkg pack --output "$(BUILD_DIR)/uicons.tar.gz" "$(ROOT_DIR)" >/dev/null
+	@UICONS_PACKAGE_OUTPUT="$(BUILD_DIR)/uicons.tar.gz" "$(ROOT_DIR)/scripts/quality.sh" package >/dev/null
 	@echo "packaged $(BUILD_DIR)/uicons.tar.gz"
 
 clean: ## Remove generated build output and Python caches.
