@@ -12,6 +12,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from .heroicons import ALIASES as _HEROICONS_ALIASES
+from .heroicons import SIZES as _HEROICONS_SIZES
+from .heroicons import SOURCE_URL as _HEROICONS_SOURCE_URL
+from .heroicons import pixel_density as _heroicons_density
+from .heroicons import rasterize_svg as _rasterize_heroicons_svg
+from .heroicons import read_pack_metadata as _heroicons_pack_metadata
 from .lucide import ALIASES as _LUCIDE_ALIASES
 from .lucide import SIZES as _LUCIDE_SIZES
 from .lucide import pixel_density as _lucide_density
@@ -70,11 +76,12 @@ def normalize_identifier(identifier: str) -> str:
     return f"{family}/{parts[1]}"
 
 
-CATALOGS = ("fontawesome", "lucide")
+CATALOGS = ("fontawesome", "lucide", "heroicons")
 
 _DEFAULT_DIRECTORIES = {
     "fontawesome": Path("src/vertical"),
     "lucide": Path("assets/lucide/icons"),
+    "heroicons": Path("assets/heroicons/icons"),
 }
 
 
@@ -258,15 +265,100 @@ class LucideCatalog:
         return sorted(assets, key=_asset_order)
 
 
+class HeroiconsCatalog:
+    """Rasterize the pinned Heroicons outline SVG pack to mono-vertical bitmaps."""
+
+    name = "heroicons"
+
+    def __init__(self, directory: Path):
+        self.directory = Path(directory)
+        svgs = sorted(self.directory.glob("*.svg"), key=lambda path: path.name)
+        if not svgs:
+            raise ValueError(f"no Heroicons SVGs found in {self.directory}")
+        self._sources: Dict[str, str] = {}
+        for svg in svgs:
+            self._sources[svg.stem] = svg.read_text(encoding="utf-8")
+        self._version, self._license = _heroicons_pack_metadata(self.directory)
+
+    @staticmethod
+    def normalize_identifier(identifier: str) -> str:
+        """Return the canonical ``heroicons/name`` form for an icon identifier."""
+
+        parts = identifier.split("/", 1)
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            raise ValueError(
+                f"invalid icon {identifier!r}; use heroicons/NAME, for example heroicons/heart"
+            )
+        if parts[0].lower() != "heroicons":
+            raise ValueError(
+                f"unsupported family {parts[0]!r} for the Heroicons catalog; use 'heroicons'"
+            )
+        return f"heroicons/{_HEROICONS_ALIASES.get(parts[1], parts[1])}"
+
+    @property
+    def available_sizes(self) -> List[int]:
+        """Return every raster size offered by this catalog, sorted."""
+
+        return list(_HEROICONS_SIZES)
+
+    @property
+    def provenance(self) -> str:
+        """Return a one-line source description for generated headers."""
+
+        return f"Heroicons {self._version} ({self._license}, {_HEROICONS_SOURCE_URL})"
+
+    def available_icons(self) -> List[str]:
+        """Return canonical ``heroicons/name`` identifiers, sorted."""
+
+        return sorted(f"heroicons/{name}" for name in self._sources)
+
+    def resolve(self, identifier: str, size: int) -> IconAsset:
+        """Resolve ``heroicons/name`` by rasterizing the vendored SVG at ``size``."""
+
+        canonical = self.normalize_identifier(identifier)
+        _, name = canonical.split("/", 1)
+        if size not in _HEROICONS_SIZES:
+            raise ValueError(
+                f"icon {canonical!r} is unavailable at {size}x{size}; "
+                f"available Heroicons sizes: {', '.join(map(str, _HEROICONS_SIZES))}"
+            )
+        try:
+            source = self._sources[name]
+        except KeyError as error:
+            raise ValueError(
+                f"icon {canonical!r} is not in the vendored Heroicons subset; "
+                f"available icons: {', '.join(self.available_icons())}"
+            ) from error
+        data = _rasterize_heroicons_svg(source, size)
+        if _heroicons_density(data) == 0.0:
+            raise ValueError(f"icon {canonical!r} rasterized empty at {size}x{size}")
+        return IconAsset(
+            family="heroicons",
+            name=name,
+            width=size,
+            height=size,
+            data=data,
+            source_symbol=f"heroicons_{name}.svg",
+        )
+
+    def resolve_many(self, identifiers: Iterable[str], sizes: Iterable[int]) -> List[IconAsset]:
+        """Resolve and return assets in deterministic family/name/size order."""
+
+        assets = [self.resolve(identifier, size) for identifier in identifiers for size in sizes]
+        return sorted(assets, key=_asset_order)
+
+
 def _asset_order(asset: IconAsset) -> Tuple[str, str, int, int]:
     return (asset.family, asset.name, asset.width, asset.height)
 
 
 def open_catalog(name: str, directory: Optional[Path] = None):
-    """Open the ``fontawesome`` or ``lucide`` catalog, defaulting to its directory."""
+    """Open a catalog by name, defaulting to its directory."""
 
     if name == "fontawesome":
         return Catalog(default_directory(name) if directory is None else directory)
     if name == "lucide":
         return LucideCatalog(default_directory(name) if directory is None else directory)
+    if name == "heroicons":
+        return HeroiconsCatalog(default_directory(name) if directory is None else directory)
     raise ValueError(f"unsupported catalog {name!r}; choose one of: {', '.join(CATALOGS)}")

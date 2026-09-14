@@ -45,15 +45,18 @@ already use; every path below compiles in CI (see `examples/`).
 
 Details, bit-order rationale, and copy-paste snippets: [`docs/displays.md`](docs/displays.md).
 
-## Two catalogs, one API
+## Three catalogs, one API
 
-Both catalogs render through the same `uicons::Icon` + `uicons::render`:
+All catalogs render through the same `uicons::Icon` + `uicons::render`:
 
-- **Font Awesome** (`fas` solid, `far` regular, `fab` brands) — checked-in
-  masters at 16/32/64 px. Brands live here only.
-- **Lucide** (pinned 1.39.0, ISC) — outline icons converted offline from
-  vendored SVGs at 16 px (minimum) and 24 px (preferred). Strokes collapse
-  below 16 px, so smaller sizes are refused instead of silently downscaled.
+| Catalog | Style | License | Sizes | Notes |
+|---|---|---|---|---|
+| Font Awesome (`fas`/`far`/`fab`) | Filled masters | CC BY 4.0 | 16/32/64 px | Brands live here only |
+| Lucide (pinned 1.39.0) | Outline strokes | ISC | 16/24 px | No brands |
+| Heroicons (pinned v2.2.0) | Outline strokes | MIT | 16/24 px | Outline only, no brands |
+
+Strokes collapse below 16 px, so smaller sizes are refused instead of
+silently downscaled.
 
 ```sh
 ./scripts/uicons init --manifest uicons-lucide.json --catalog lucide --sizes 16,24

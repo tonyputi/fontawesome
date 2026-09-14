@@ -41,3 +41,13 @@ The vendored sources in assets/lucide/icons/ are from the Lucide project
 1.39.0, and are licensed under the ISC License (see
 assets/lucide/LICENSE-ISC.txt). Generated headers derived from them carry the
 Lucide version and license in a source comment.
+
+Heroicons Pack Attribution
+--------------------------
+
+The vendored sources in assets/heroicons/icons/ are from the Heroicons
+project (https://heroicons.com, https://github.com/tailwindlabs/heroicons),
+pinned release v2.2.0, and are licensed under the MIT License (see
+assets/heroicons/LICENSE-MIT.txt). Only outline icons are vendored.
+Generated headers derived from them carry the Heroicons version and license
+in a source comment.

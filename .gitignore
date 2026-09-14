@@ -52,7 +52,8 @@ Mkfile.old
 dkms.conf
 
 # Legacy asset blobs (Font Awesome OTF/PNG/SVG sources). Generation uses the
-# checked-in src/vertical headers and assets/lucide only.
+# checked-in src/vertical headers and the pinned assets/lucide +
+# assets/heroicons packs only (force-added as documented exceptions).
 assets
 
 # macOS Finder metadata.
