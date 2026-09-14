@@ -154,7 +154,13 @@ def _resolve_animations(
             family, name = canonical.split("/", 1)
             key = (family, name, frame["size"], frame["size"])
             frames.append({"symbol": symbols[key], "duration_ms": frame["duration_ms"]})
-        resolved.append({"symbol": _animation_symbol(animation["name"]), "loop": animation["loop"], "frames": frames})
+        resolved.append(
+            {
+                "symbol": _animation_symbol(animation["name"]),
+                "loop": animation["loop"],
+                "frames": frames,
+            }
+        )
     return resolved
 
 
@@ -194,7 +200,8 @@ def render_header(
                 _format_bytes(packed),
                 "};",
                 f"static const Icon {symbol}({symbol}_data, {asset.width}, {asset.height},",
-                f"                          {stride(asset.width, output_format)}, sizeof({symbol}_data),",
+                f"                          {stride(asset.width, output_format)},"
+                f" sizeof({symbol}_data),",
                 f"                          {PIXEL_FORMAT_ENUM[output_format]});",
                 "",
             ]
@@ -234,12 +241,16 @@ def build(manifest_path: Path, catalog_dir: Path, output_dir: Path) -> Path:
                 ", ".join(map(str, catalog.available_sizes)),
             )
         )
-    canonical_identifiers = tuple(sorted({catalog.normalize_identifier(icon) for icon in identifiers}))
+    canonical_identifiers = tuple(
+        sorted({catalog.normalize_identifier(icon) for icon in identifiers})
+    )
     assets = catalog.resolve_many(canonical_identifiers, sizes)
     symbols = {
         (asset.family, asset.name, asset.width, asset.height): _symbol(asset) for asset in assets
     }
-    resolved = _resolve_animations(animations, catalog, canonical_identifiers, sizes, symbols)
+    resolved = _resolve_animations(
+        animations, catalog, canonical_identifiers, sizes, symbols
+    )
     header = render_header(assets, manifest, catalog.provenance, output_format, resolved)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -265,12 +276,16 @@ def report(manifest_path: Path, catalog_dir: Path) -> Dict[str, Any]:
                 ", ".join(map(str, catalog.available_sizes)),
             )
         )
-    canonical_identifiers = tuple(sorted({catalog.normalize_identifier(icon) for icon in identifiers}))
+    canonical_identifiers = tuple(
+        sorted({catalog.normalize_identifier(icon) for icon in identifiers})
+    )
     assets = catalog.resolve_many(canonical_identifiers, sizes)
     symbols = {
         (asset.family, asset.name, asset.width, asset.height): _symbol(asset) for asset in assets
     }
-    resolved = _resolve_animations(animations, catalog, canonical_identifiers, sizes, symbols)
+    resolved = _resolve_animations(
+        animations, catalog, canonical_identifiers, sizes, symbols
+    )
     rows = [
         analyze(asset.family, asset.name, asset.width, asset.height, asset.data, output_format)
         for asset in assets

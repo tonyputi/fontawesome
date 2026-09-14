@@ -1,6 +1,8 @@
+import io
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 from tools.uicons.catalog import Catalog
@@ -95,6 +97,79 @@ class UiconsGeneratorTest(unittest.TestCase):
             )
             result = json.loads(manifest.read_text(encoding="utf-8"))
             self.assertEqual(result["icons"], ["fas/heart"])
+
+    def test_cli_roundtrip_init_add_build_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            manifest = workspace / "uicons.json"
+            self.assertEqual(
+                main(["init", "--manifest", str(manifest), "--sizes", "16"]),
+                0,
+            )
+            self.assertEqual(
+                main(
+                    [
+                        "add",
+                        "fas/heart",
+                        "--manifest",
+                        str(manifest),
+                        "--catalog-dir",
+                        str(CATALOG_DIR),
+                    ]
+                ),
+                0,
+            )
+            self.assertEqual(
+                main(
+                    [
+                        "build",
+                        "--manifest",
+                        str(manifest),
+                        "--catalog-dir",
+                        str(CATALOG_DIR),
+                        "--output-dir",
+                        str(workspace / "generated"),
+                    ]
+                ),
+                0,
+            )
+            self.assertIn(
+                "fas_heart_16x16_data",
+                (workspace / "generated" / "uicons_generated.h").read_text(
+                    encoding="utf-8"
+                ),
+            )
+            with redirect_stdout(io.StringIO()) as text_report:
+                self.assertEqual(
+                    main(
+                        [
+                            "report",
+                            "--manifest",
+                            str(manifest),
+                            "--catalog-dir",
+                            str(CATALOG_DIR),
+                        ]
+                    ),
+                    0,
+                )
+            self.assertIn("fas/heart", text_report.getvalue())
+            with redirect_stdout(io.StringIO()) as json_report:
+                self.assertEqual(
+                    main(
+                        [
+                            "report",
+                            "--manifest",
+                            str(manifest),
+                            "--catalog-dir",
+                            str(CATALOG_DIR),
+                            "--as",
+                            "json",
+                        ]
+                    ),
+                    0,
+                )
+            rows = json.loads(json_report.getvalue())["icons"]
+            self.assertEqual([row["icon"] for row in rows], ["fas/heart"])
 
 
 if __name__ == "__main__":

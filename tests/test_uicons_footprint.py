@@ -5,7 +5,7 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from tools.uicons.catalog import Catalog, LucideCatalog, open_catalog
+from tools.uicons.catalog import open_catalog
 from tools.uicons.cli import main
 from tools.uicons.formats import (
     FORMATS,

@@ -41,7 +41,9 @@ def _catalog_argument(parser: argparse.ArgumentParser) -> None:
 
 
 def create_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="uicons", description="Select and generate embedded uIcons headers")
+    parser = argparse.ArgumentParser(
+        prog="uicons", description="Select and generate embedded uIcons headers"
+    )
     commands = parser.add_subparsers(dest="command", required=True)
 
     init = commands.add_parser("init", help="create a project manifest")
@@ -52,7 +54,9 @@ def create_parser() -> argparse.ArgumentParser:
         default="fontawesome",
         help="icon catalog (default: fontawesome)",
     )
-    init.add_argument("--sizes", type=_sizes, default=[16], help="comma-separated sizes (default: 16)")
+    init.add_argument(
+        "--sizes", type=_sizes, default=[16], help="comma-separated sizes (default: 16)"
+    )
     init.add_argument(
         "--format",
         choices=sorted(FORMATS),
@@ -81,7 +85,9 @@ def create_parser() -> argparse.ArgumentParser:
         help="generated header directory (default: include/uicons/generated)",
     )
 
-    report_parser = commands.add_parser("report", help="print the footprint of the selected manifest")
+    report_parser = commands.add_parser(
+        "report", help="print the footprint of the selected manifest"
+    )
     _manifest_argument(report_parser)
     _catalog_argument(report_parser)
     report_parser.add_argument(

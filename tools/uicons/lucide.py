@@ -35,7 +35,8 @@ ALIASES = {
 
 _SHAPE_TAGS = ("path", "circle", "rect", "line", "polyline", "polygon")
 _METADATA_TAGS = ("title", "desc", "defs", "metadata")
-_TOKEN = re.compile(r"[AaCcHhLlMmQqSsTtVvZz]|[-+]?(?:[0-9]*\.[0-9]+|[0-9]+\.?)(?:[eE][-+]?[0-9]+)?")
+_NUMBER_PATTERN = r"[-+]?(?:[0-9]*\.[0-9]+|[0-9]+\.?)(?:[eE][-+]?[0-9]+)?"
+_TOKEN = re.compile(r"[AaCcHhLlMmQqSsTtVvZz]|" + _NUMBER_PATTERN)
 _SEPARATOR = re.compile(r"[,\s]+")
 
 
@@ -56,7 +57,7 @@ def _local_name(tag: str) -> str:
 
 
 def _parse_points(text: str) -> List[Tuple[float, float]]:
-    numbers = [float(value) for value in re.findall(r"[-+]?(?:[0-9]*\.[0-9]+|[0-9]+\.?)(?:[eE][-+]?[0-9]+)?", text)]
+    numbers = [float(value) for value in re.findall(_NUMBER_PATTERN, text)]
     if len(numbers) % 2:
         raise ValueError(f"odd coordinate count in points {text!r}")
     return [(numbers[i], numbers[i + 1]) for i in range(0, len(numbers), 2)]
@@ -78,7 +79,9 @@ def _flatten_cubic(p0, p1, p2, p3, depth=0) -> List[Tuple[float, float]]:
     m012 = ((m01[0] + m12[0]) / 2, (m01[1] + m12[1]) / 2)
     m123 = ((m12[0] + m23[0]) / 2, (m12[1] + m23[1]) / 2)
     mid = ((m012[0] + m123[0]) / 2, (m012[1] + m123[1]) / 2)
-    return _flatten_cubic(p0, m01, m012, mid, depth + 1) + _flatten_cubic(mid, m123, m23, p3, depth + 1)
+    return _flatten_cubic(p0, m01, m012, mid, depth + 1) + _flatten_cubic(
+        mid, m123, m23, p3, depth + 1
+    )
 
 
 def _flatten_quadratic(p0, p1, p2) -> List[Tuple[float, float]]:
@@ -137,7 +140,9 @@ def _arc_center(current, rx, ry, rotation_deg, large_arc, sweep, target):
     return center, rx, ry, start, sweep_angle, phi
 
 
-def _flatten_arc(current, rx, ry, rotation_deg, large_arc, sweep, target) -> List[Tuple[float, float]]:
+def _flatten_arc(
+    current, rx, ry, rotation_deg, large_arc, sweep, target
+) -> List[Tuple[float, float]]:
     center, rx, ry, start, sweep_angle, phi = _arc_center(
         current, rx, ry, rotation_deg, large_arc, sweep, target
     )
@@ -150,7 +155,12 @@ def _flatten_arc(current, rx, ry, rotation_deg, large_arc, sweep, target) -> Lis
         theta = start + sweep_angle * step / steps
         x = rx * math.cos(theta)
         y = ry * math.sin(theta)
-        points.append((center[0] + cos_phi * x - sin_phi * y, center[1] + sin_phi * x + cos_phi * y))
+        points.append(
+            (
+                center[0] + cos_phi * x - sin_phi * y,
+                center[1] + sin_phi * x + cos_phi * y,
+            )
+        )
     points[-1] = target
     return points
 
@@ -169,7 +179,11 @@ class _PathParser:
         self.closed = False
 
     def _peek_command(self) -> bool:
-        return self.position < len(self.tokens) and len(self.tokens[self.position]) == 1 and self.tokens[self.position].isalpha()
+        return (
+            self.position < len(self.tokens)
+            and len(self.tokens[self.position]) == 1
+            and self.tokens[self.position].isalpha()
+        )
 
     def _next_number(self) -> float:
         if self.position >= len(self.tokens) or self._peek_command():
@@ -254,7 +268,10 @@ class _PathParser:
             p2 = self._point(relative)
             p3 = self._point(relative)
             if self.previous.upper() in ("C", "S"):
-                p1 = (2 * self.current[0] - self.previous_cubic[0], 2 * self.current[1] - self.previous_cubic[1])
+                p1 = (
+                    2 * self.current[0] - self.previous_cubic[0],
+                    2 * self.current[1] - self.previous_cubic[1],
+                )
             else:
                 p1 = self.current
             if not self.active:
@@ -293,7 +310,9 @@ class _PathParser:
             target = self._point(relative)
             if not self.active:
                 self.active.append(self.current)
-            self.active.extend(_flatten_arc(self.current, rx, ry, rotation, large_arc, sweep, target))
+            self.active.extend(
+                _flatten_arc(self.current, rx, ry, rotation, large_arc, sweep, target)
+            )
             self.current = target
         else:
             raise ValueError(f"unsupported path command {command!r}")
@@ -349,7 +368,9 @@ def _shapes_from_svg(text: str) -> Tuple[List[Tuple[List[Tuple[float, float]], b
         if kind == "path":
             polylines.extend(_parse_path(attrs.get("d", "")))
         elif kind == "circle":
-            cx, cy, radius = float(attrs.get("cx", "0")), float(attrs.get("cy", "0")), float(attrs.get("r", "0"))
+            cx = float(attrs.get("cx", "0"))
+            cy = float(attrs.get("cy", "0"))
+            radius = float(attrs.get("r", "0"))
             ring = [
                 (cx + radius * math.cos(2 * math.pi * i / CIRCLE_SEGMENTS),
                  cy + radius * math.sin(2 * math.pi * i / CIRCLE_SEGMENTS))
@@ -361,7 +382,8 @@ def _shapes_from_svg(text: str) -> Tuple[List[Tuple[List[Tuple[float, float]], b
             x, y = float(attrs.get("x", "0")), float(attrs.get("y", "0"))
             width, height = float(attrs.get("width", "0")), float(attrs.get("height", "0"))
             radius = float(attrs.get("rx", attrs.get("ry", "0") or "0") or "0")
-            polylines.append((_rounded_rect(x, y, width, height, min(radius, width / 2, height / 2)), True))
+            corner = min(radius, width / 2, height / 2)
+            polylines.append((_rounded_rect(x, y, width, height, corner), True))
         elif kind == "line":
             polylines.append(
                 (
@@ -424,8 +446,10 @@ def rasterize_svg(text: str, size: int) -> Tuple[int, ...]:
     segments = []
     for points, _ in polylines:
         for index in range(len(points) - 1):
-            ax, ay = points[index][0] * scale * SUPERSAMPLE, points[index][1] * scale * SUPERSAMPLE
-            bx, by = points[index + 1][0] * scale * SUPERSAMPLE, points[index + 1][1] * scale * SUPERSAMPLE
+            ax = points[index][0] * scale * SUPERSAMPLE
+            ay = points[index][1] * scale * SUPERSAMPLE
+            bx = points[index + 1][0] * scale * SUPERSAMPLE
+            by = points[index + 1][1] * scale * SUPERSAMPLE
             segments.append((ax, ay, bx, by))
         for vx, vy in points:
             segments.append((vx * scale * SUPERSAMPLE, vy * scale * SUPERSAMPLE,

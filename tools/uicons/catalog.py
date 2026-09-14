@@ -84,7 +84,9 @@ def default_directory(catalog: str) -> Path:
     try:
         return _DEFAULT_DIRECTORIES[catalog]
     except KeyError as error:
-        raise ValueError(f"unsupported catalog {catalog!r}; choose one of: {', '.join(CATALOGS)}") from error
+        raise ValueError(
+            f"unsupported catalog {catalog!r}; choose one of: {', '.join(CATALOGS)}"
+        ) from error
 
 
 class Catalog:
@@ -157,7 +159,7 @@ class Catalog:
         """Resolve and return assets in deterministic family/name/size order."""
 
         assets = [self.resolve(identifier, size) for identifier in identifiers for size in sizes]
-        return sorted(assets, key=lambda asset: (asset.family, asset.name, asset.width, asset.height))
+        return sorted(assets, key=_asset_order)
 
     @property
     def available_sizes(self) -> List[int]:
@@ -198,7 +200,9 @@ class LucideCatalog:
                 f"invalid icon {identifier!r}; use lucide/NAME, for example lucide/heart"
             )
         if parts[0].lower() != "lucide":
-            raise ValueError(f"unsupported family {parts[0]!r} for the Lucide catalog; use 'lucide'")
+            raise ValueError(
+                f"unsupported family {parts[0]!r} for the Lucide catalog; use 'lucide'"
+            )
         return f"lucide/{_LUCIDE_ALIASES.get(parts[1], parts[1])}"
 
     @property
@@ -251,7 +255,11 @@ class LucideCatalog:
         """Resolve and return assets in deterministic family/name/size order."""
 
         assets = [self.resolve(identifier, size) for identifier in identifiers for size in sizes]
-        return sorted(assets, key=lambda asset: (asset.family, asset.name, asset.width, asset.height))
+        return sorted(assets, key=_asset_order)
+
+
+def _asset_order(asset: IconAsset) -> Tuple[str, str, int, int]:
+    return (asset.family, asset.name, asset.width, asset.height)
 
 
 def open_catalog(name: str, directory: Optional[Path] = None):
