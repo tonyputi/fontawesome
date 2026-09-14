@@ -95,10 +95,11 @@ no duplicate pixel data. See [`docs/animations.md`](docs/animations.md).
 ## Status
 
 Shipped and gated: selective generation, Lucide pack, both pixel formats,
-rotation, animations, display wiring, and compilable examples. What is still
-open lives in [GitHub issues](https://github.com/tonyputi/uicons/issues):
-multi-target CI beyond AVR, registry metadata polish, and the quality-gate
-wishlist. Scope and non-goals: [`docs/differentiation.md`](docs/differentiation.md).
+rotation, animations, display wiring, compilable examples, and multi-target CI
+(native, AVR Uno, ESP32). What is still open lives in
+[GitHub issues](https://github.com/tonyputi/uicons/issues): Arduino Library
+Manager, generator-input separation, and the quality-gate wishlist. Scope and
+non-goals: [`docs/differentiation.md`](docs/differentiation.md).
 
 The legacy full-catalog header is still available for compatibility:
 

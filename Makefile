@@ -41,11 +41,12 @@ report: ## Print the footprint report for every example manifest.
 		$(UICONS) report --manifest "$$manifest"; \
 	done
 
-examples: ## Build every PlatformIO example (basic native + display AVR).
+examples: ## Build every PlatformIO example (native + AVR Uno + ESP32 smoke).
 	@pio run -d $(ROOT_DIR)/examples/basic -e native -t exec
 	@pio run -d $(ROOT_DIR)/examples/display_u8g2 -e uno
 	@pio run -d $(ROOT_DIR)/examples/display_adafruit -e uno
 	@pio run -d $(ROOT_DIR)/examples/display_tiny4koled -e uno
+	@pio run -d $(ROOT_DIR)/examples/target_esp32 -e esp32dev
 
 package: ## Create the PlatformIO package tarball in $(BUILD_DIR)/.
 	@mkdir -p "$(BUILD_DIR)"
