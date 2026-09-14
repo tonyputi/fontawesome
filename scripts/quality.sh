@@ -140,7 +140,7 @@ phase_determinism() {
 
 phase_stale() {
     printf '%s\n' '== committed generated headers =='
-    for example in examples/basic examples/display_u8g2 examples/display_adafruit examples/display_tiny4koled examples/target_esp32; do
+    for example in examples/basic examples/display_u8g2 examples/display_adafruit examples/display_tiny4koled examples/target_esp32 examples/simavr_uno; do
         run_quiet "stale-$example" ./scripts/uicons build --manifest "$example/uicons.json" --output-dir "$BUILD_DIR/gen-example"
         if ! cmp "$BUILD_DIR/gen-example/uicons_generated.h" "$example/include/uicons_generated.h"; then
             printf 'stale generated header: %s\n' "$example" >&2
@@ -152,6 +152,23 @@ phase_stale() {
 phase_examples() {
     need pio
     run_quiet examples make -C "$ROOT_DIR" examples
+}
+
+# Runs the simavr_uno firmware on a simulated ATmega328P and expects the
+# PASS line: the only runtime proof that icon bytes come out of real flash
+# reads (pgm_read_byte), which host builds cannot exercise. scripts/
+# simavr_pty.py allocates the pty (line-buffered UART stream on any host)
+# and kills the simulator once the PASS line matches.
+phase_simtest() {
+    need pio
+    need python3
+    printf '%s\n' '== simulated ATmega328P (SimAVR) =='
+    run_quiet simtest-build pio run -d "$ROOT_DIR/examples/simavr_uno" -e uno
+    simavr_bin="${PLATFORMIO_CORE_DIR:-$HOME/.platformio}/packages/tool-simavr/bin/simavr"
+    run_quiet simtest python3 "$ROOT_DIR/scripts/simavr_pty.py" \
+        --expect "SIMAVR-TEST PASS" --timeout 60 -- "$simavr_bin" \
+        -m atmega328p -f 16000000L \
+        "$ROOT_DIR/examples/simavr_uno/.pio/build/uno/firmware.elf"
 }
 
 # Hand-written headers analyzed as translation units, not just via
@@ -218,7 +235,7 @@ phase_package() {
     fi
 }
 
-ALL_PHASES=(format host python determinism stale examples tidy cppcheck package)
+ALL_PHASES=(format host python determinism stale examples simtest tidy cppcheck package)
 
 USAGE_PHASES="$(IFS='|'; echo "${ALL_PHASES[*]}")"
 
@@ -239,7 +256,7 @@ for phase in "${SELECTED[@]}"; do
     case "$phase" in
         all) EXPANDED+=("${ALL_PHASES[@]}") ;;
         versions) ;;
-        format | host | python | determinism | stale | examples | tidy | cppcheck | package) EXPANDED+=("$phase") ;;
+        format | host | python | determinism | stale | examples | simtest | tidy | cppcheck | package) EXPANDED+=("$phase") ;;
         *) usage ;;
     esac
 done

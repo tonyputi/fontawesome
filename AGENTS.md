@@ -19,7 +19,7 @@ Font Awesome (filled masters, legacy), Lucide (outline, ISC), Heroicons
    `git switch -c <type>/<slug>` (`feat/`, `chore/`, `docs/`).
 3. Implement, then run the gate: `./scripts/quality.sh` (exit 0 required).
    Iterate per phase while working:
-   `./scripts/quality.sh [format|host|python|determinism|stale|examples|tidy|cppcheck|package]`
+   `./scripts/quality.sh [format|host|python|determinism|stale|examples|simtest|tidy|cppcheck|package]`
 4. Push, open a PR with `gh api --method POST repos/tonyputi/uicons/pulls`,
    body ending in `Closes #<n>`. Never merge: merging is owner-level.
 5. After the owner merges, `git switch main && git pull --ff-only`, delete
