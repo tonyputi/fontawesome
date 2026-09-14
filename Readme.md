@@ -125,7 +125,8 @@ checked by the `package` gate phase:
   `examples/*.json`): generator, sources, and checks.
 - **User-generated, never committed to `src/`** (`uicons_generated.h`):
   produced by `./scripts/uicons build` from your manifest; examples check in
-  their copy under `examples/*/include/` so CI can drift-check it.
+  their copy under `examples/*/include/` so the `stale` gate phase can
+  verify it matches the manifests.
 
 ## Development
 
