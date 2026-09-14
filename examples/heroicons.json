@@ -1,0 +1,9 @@
+{
+  "catalog": "heroicons",
+  "sizes": [16, 24],
+  "format": "mono-vertical",
+  "icons": [
+    "heroicons/heart",
+    "heroicons/home"
+  ]
+}

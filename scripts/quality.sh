@@ -125,7 +125,7 @@ phase_python() {
 
 phase_drift() {
     printf '%s\n' '== generation drift =='
-    for manifest in examples/uicons.json examples/lucide.json examples/animation.json; do
+    for manifest in examples/uicons.json examples/lucide.json examples/heroicons.json examples/animation.json; do
         name="$(basename "$manifest" .json)"
         run_quiet "drift-$name-a" ./scripts/uicons build --manifest "$manifest" --output-dir "$BUILD_DIR/gen-a-$name"
         run_quiet "drift-$name-b" ./scripts/uicons build --manifest "$manifest" --output-dir "$BUILD_DIR/gen-b-$name"
