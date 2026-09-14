@@ -23,7 +23,7 @@ help: ## Show this help.
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  %-10s %s\n", $$1, $$2}'
 
-quality: ## Run the full quality gate (format, tests, drift, analysis, package).
+quality: ## Run the full quality gate (or: scripts/quality.sh <phases> to iterate).
 	@$(ROOT_DIR)/scripts/quality.sh
 
 test: quality ## Alias for quality.
